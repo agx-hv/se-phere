@@ -1,22 +1,32 @@
 extern crate glfw;
 extern crate gl;
 use glfw::{Action, Context, Key};
+use std::fs::OpenOptions;
 
 fn main() {
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
 
-    let (mut window, events) = glfw.create_window(800, 600, "Hello this is window", glfw::WindowMode::Windowed)
+    let (mut window, events) = glfw.create_window(640, 640, "Se-Phere!", glfw::WindowMode::Windowed)
         .expect("Failed to create GLFW window.");
 
     window.set_key_polling(true);
     window.make_current();
 
-    type Vertex = [f32; 3];
-    const VERTICES: [Vertex; 3] = [
-        [-0.5, -0.5, 0.0],
-        [0.5, -0.5, 0.0],
-        [0.0,  0.5, 0.0],
-    ];
+    let sphere_path : &str = "assets/mesh/sphere.stl";
+    let mut file = OpenOptions::new().read(true).open(sphere_path).unwrap();
+    let sphere = stl_io::read_stl(&mut file).unwrap();
+
+    let mut vertices = Vec::new();
+
+    for face in sphere.faces {
+        for i in face.vertices {
+            let v = sphere.vertices[i as usize];
+            vertices.push(v[0]);
+            vertices.push(v[1]);
+            vertices.push(v[2]);
+        }
+    }
+
     unsafe {
         let mut vao = 0u32;
         let mut vbo = 0u32;
@@ -29,8 +39,8 @@ fn main() {
         assert_ne!(vbo,0);
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         gl::BufferData(gl::ARRAY_BUFFER, 
-                       std::mem::size_of_val(&VERTICES) as isize,
-                       VERTICES.as_ptr().cast(),
+                       (vertices.len() * std::mem::size_of::<f32>()) as isize,
+                       vertices.as_ptr().cast(),
                        gl::STATIC_DRAW);
 
         gl::VertexAttribPointer(
@@ -38,7 +48,7 @@ fn main() {
             3,
             gl::FLOAT,
             gl::FALSE,
-            std::mem::size_of::<Vertex>().try_into().unwrap(),
+            (3*std::mem::size_of::<f32>()).try_into().unwrap(),
             0 as *const _,
             );
         gl::EnableVertexAttribArray(0);
@@ -131,7 +141,7 @@ fn main() {
         }
         unsafe{
             gl::Clear(gl::COLOR_BUFFER_BIT);
-            gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            gl::DrawArrays(gl::TRIANGLES, 0, vertices.len() as i32);
         }
         window.swap_buffers();
     }
