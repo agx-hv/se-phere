@@ -1,2 +1,2 @@
-start code
+start code .
 exit
