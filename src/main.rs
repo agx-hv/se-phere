@@ -1,8 +1,8 @@
 extern crate glfw;
 extern crate gl;
 use glfw::{Action, Context, Key};
-use std::fs::OpenOptions;
 pub mod Camera; // camera stuff
+pub mod meshloader; 
 
 pub fn main() {
     Camera::main();
@@ -14,20 +14,11 @@ pub fn main() {
     window.set_key_polling(true);
     window.make_current();
 
-    let sphere_path : &str = "assets/mesh/sphere.stl";
-    let mut file = OpenOptions::new().read(true).open(sphere_path).unwrap();
-    let sphere = stl_io::read_stl(&mut file).unwrap();
 
+    let mut sphere = meshloader::Mesh{vertices: Vec::new()};
+    sphere.load("assets/mesh/sphere.stl");
     let mut vertices = Vec::new();
-
-    for face in sphere.faces {
-        for i in face.vertices {
-            let v = sphere.vertices[i as usize];
-            vertices.push(v[0]);
-            vertices.push(v[1]);
-            vertices.push(v[2]);
-        }
-    }
+    vertices.append(&mut sphere.vertices);
 
     unsafe {
         let mut vao = 0u32;
