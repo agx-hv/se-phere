@@ -8,4 +8,5 @@ edition = "2021"
 [dependencies]
 gl = "0.14.0"
 glfw = "0.55.0"
+glm = "0.2.3"
 stl_io = "0.7.0"
