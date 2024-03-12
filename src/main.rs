@@ -2,8 +2,10 @@ extern crate glfw;
 extern crate gl;
 use glfw::{Action, Context, Key};
 use std::fs::OpenOptions;
+pub mod Camera; // camera stuff
 
-fn main() {
+pub fn main() {
+    Camera::main();
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
 
     let (mut window, events) = glfw.create_window(640, 640, "Se-Phere!", glfw::WindowMode::Windowed)
