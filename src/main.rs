@@ -182,31 +182,19 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, play
         glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
             window.set_should_close(true)
         }
-        _ => {}
-    }
-    match event {
         glfw::WindowEvent::Key(Key::W, _, Action::Repeat, _) => {
             player.mv(glm::vec3(0.0,0.0,-MOVEMENT_DELTA));
         }
-        _ => {}
-    }
-    match event {
         glfw::WindowEvent::Key(Key::S, _, Action::Repeat, _) => {
             player.mv(glm::vec3(0.0,0.0,MOVEMENT_DELTA));
         }
-        _ => {}
-    }
-    match event {
         glfw::WindowEvent::Key(Key::A, _, Action::Repeat, _) => {
             player.mv(glm::vec3(-MOVEMENT_DELTA,0.0,0.0));
         }
-        _ => {}
-    }
-    match event {
         glfw::WindowEvent::Key(Key::D, _, Action::Repeat, _) => {
             player.mv(glm::vec3(MOVEMENT_DELTA,0.0,0.0));
         }
         _ => {}
-    }
+    }   
     dbg!(player.pos);
 }

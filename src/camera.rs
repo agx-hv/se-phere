@@ -1,7 +1,6 @@
 extern crate glm;
 use glm::*;
 use glm::ext::*;
-use crate::num_traits::One;
 
 pub struct Camera {
     pub eye: Vector3<f32>,
