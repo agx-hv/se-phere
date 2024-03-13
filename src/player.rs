@@ -13,12 +13,4 @@ impl Player {
         let t_mat = translate(&Matrix4::<f32>::one(),t_vec);
         self.pos = (t_mat * self.pos.extend(1.0)).truncate(3);
     }
-    pub fn t_mesh(&self) -> crate::meshloader::Mesh {
-        let t_mat = translate(&Matrix4::<f32>::one(), self.pos);
-        let mut result = crate::meshloader::Mesh{vertices: vec!()};
-        for vertex in &self.mesh.vertices {
-            result.vertices.push((t_mat * vertex.extend(1.0)).truncate(3));
-        }
-        return result;
-    }
 }

@@ -2,7 +2,9 @@ extern crate glfw;
 extern crate gl;
 extern crate glm;
 extern crate num_traits;
+use crate::num_traits::One;
 use glfw::{Action, Context, Key};
+use std::f32::consts::PI;
 pub mod camera; // camera stuff
 pub mod meshloader; 
 pub mod player; 
@@ -12,9 +14,25 @@ const MOVEMENT_DELTA: f32 = 0.05;
 
 pub fn main() {
     let mut sphere = meshloader::Mesh{vertices: Vec::new()};
-    sphere.load("assets/mesh/small_sphere.stl");
+    sphere.load("assets/mesh/cube.stl");
+
     let mut player = player::Player{mesh: sphere, pos: ORIGIN};
-    camera::main();
+
+    let mut vertices = Vec::new();
+    for vertex in &player.mesh.vertices {
+        vertices.extend_from_slice(&mut vertex.as_array().as_slice());
+    }
+
+    let mut camera = camera::Camera {
+        eye: glm::vec3(0.0, 1.0, 1.0),
+        center: glm::vec3(0.0, 0.5, 0.0),
+        up: glm::vec3(0.0,1.0,0.0),
+        fov: PI/3.0,
+        aspect: 1.0,
+        near: 0.1,
+        far: 100.0,
+    };
+
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
 
     let (mut window, events) = glfw.create_window(800, 800, "Se-Phere!", glfw::WindowMode::Windowed)
@@ -24,13 +42,9 @@ pub fn main() {
     window.make_current();
 
     while !window.should_close() {
-        let mut vertices = Vec::new();
-        for vertex in &player.t_mesh().vertices {
-            //let proj = glm::ext::perspective::<f32>(1.0, 1.0, 0.0, 20.0);
-            //let transformed = proj * vertex.extend(1.0);
-            //vertices.extend_from_slice(&mut transformed.truncate(3).as_array().as_slice());
-            vertices.extend_from_slice(&mut vertex.as_array().as_slice());
-        }
+
+        let t_mat = glm::ext::translate(&glm::Matrix4::<f32>::one(), player.pos);
+
         unsafe {
             let mut vao = 0u32;
             let mut vbo = 0u32;
@@ -43,9 +57,9 @@ pub fn main() {
             assert_ne!(vbo,0);
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
             gl::BufferData(gl::ARRAY_BUFFER, 
-                           (vertices.len() * std::mem::size_of::<f32>()) as isize,
-                           vertices.as_ptr().cast(),
-                           gl::STATIC_DRAW);
+                (vertices.len() * std::mem::size_of::<f32>()) as isize,
+                vertices.as_ptr().cast(),
+                gl::STATIC_DRAW);
 
             gl::VertexAttribPointer(
                 0,
@@ -54,13 +68,15 @@ pub fn main() {
                 gl::FALSE,
                 (3*std::mem::size_of::<f32>()).try_into().unwrap(),
                 0 as *const _,
-                );
+            );
             gl::EnableVertexAttribArray(0);
             let vs = gl::CreateShader(gl::VERTEX_SHADER);
             const VERT_SHADER: &str = r#"#version 330 core
-              layout (location = 0) in vec3 pos;
+              layout (location = 0) in vec3 aPos;
+              uniform mat4 pv;
+              uniform mat4 model;
               void main() {
-                gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
+                gl_Position = pv * model * vec4(aPos, 1.0);
               }
             "#;
             gl::ShaderSource(
@@ -68,7 +84,7 @@ pub fn main() {
                 1,
                 &(VERT_SHADER.as_bytes().as_ptr().cast()),
                 &(VERT_SHADER.len().try_into().unwrap()),
-                );
+            );
             gl::CompileShader(vs);
             let mut success = 0;
             gl::GetShaderiv(vs, gl::COMPILE_STATUS, &mut success);
@@ -80,7 +96,7 @@ pub fn main() {
                     1024,
                     &mut log_len,
                     v.as_mut_ptr().cast(),
-                    );
+                );
                 v.set_len(log_len.try_into().unwrap());
                 panic!("Vertex Compile Error: {}", String::from_utf8_lossy(&v));
             }
@@ -97,7 +113,7 @@ pub fn main() {
                 1,
                 &(FRAG_SHADER.as_bytes().as_ptr().cast()),
                 &(FRAG_SHADER.len().try_into().unwrap()),
-                );
+            );
             gl::CompileShader(fs);
             let mut success = 0;
             gl::GetShaderiv(fs, gl::COMPILE_STATUS, &mut success);
@@ -109,7 +125,7 @@ pub fn main() {
                     1024,
                     &mut log_len,
                     v.as_mut_ptr().cast(),
-                    );
+                );
                 v.set_len(log_len.try_into().unwrap());
                 panic!("Fragment Compile Error: {}", String::from_utf8_lossy(&v));
             }
@@ -127,25 +143,37 @@ pub fn main() {
                     1024,
                     &mut log_len,
                     v.as_mut_ptr().cast(),
-                    );
+                );
                 v.set_len(log_len.try_into().unwrap());
                 panic!("Program Link Error: {}", String::from_utf8_lossy(&v));
             }
+            gl::UseProgram(shader_program);
+            let pv_loc = gl::GetUniformLocation(shader_program, b"pv\0".as_ptr() as *const i8);
+            gl::UniformMatrix4fv(
+                pv_loc,
+                1,
+                gl::FALSE,
+                &camera.pv_mat()[0][0]
+            );
+            let model_loc = gl::GetUniformLocation(shader_program, b"model\0".as_ptr() as *const i8);
+            gl::UniformMatrix4fv(
+                model_loc,
+                1,
+                gl::FALSE,
+                &t_mat[0][0]
+            );
             gl::DeleteShader(vs);
             gl::DeleteShader(fs);
-            gl::UseProgram(shader_program);
             window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
-        }
-
-        glfw.poll_events();
-        for (_, event) in glfw::flush_messages(&events) {
-            handle_window_event(&mut window, event, &mut player);
-        }
-        unsafe{
+            for (_, event) in glfw::flush_messages(&events) {
+                handle_window_event(&mut window, event, &mut player);
+            }
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::DrawArrays(gl::TRIANGLES, 0, vertices.len() as i32);
+            glfw.poll_events();
+            window.swap_buffers();
         }
-        window.swap_buffers();
+
     }
 }
 
@@ -158,13 +186,13 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, play
     }
     match event {
         glfw::WindowEvent::Key(Key::W, _, Action::Repeat, _) => {
-            player.mv(glm::vec3(0.0,MOVEMENT_DELTA,0.0));
+            player.mv(glm::vec3(0.0,0.0,-MOVEMENT_DELTA));
         }
         _ => {}
     }
     match event {
         glfw::WindowEvent::Key(Key::S, _, Action::Repeat, _) => {
-            player.mv(glm::vec3(0.0,-MOVEMENT_DELTA,0.0));
+            player.mv(glm::vec3(0.0,0.0,MOVEMENT_DELTA));
         }
         _ => {}
     }
@@ -180,4 +208,5 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, play
         }
         _ => {}
     }
+    dbg!(player.pos);
 }
