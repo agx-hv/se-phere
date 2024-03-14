@@ -4,29 +4,29 @@ extern crate glm;
 extern crate num_traits;
 use crate::num_traits::One;
 use glfw::{Action, Context, Key};
-use std::f32::consts::PI;
+use std::{f32::consts::PI, process::CommandEnvs};
 pub mod camera; // camera stuff
 pub mod meshloader; 
 pub mod player; 
 
+
 const ORIGIN: glm::Vector3<f32> = glm::Vector3{ x: 0.0, y: 0.0, z: 0.0 };
 const MOVEMENT_DELTA: f32 = 0.05;
+const CAMERA_DELTA: f32 = 0.1;
 
 pub fn main() {
     let mut sphere = meshloader::Mesh{vertices: Vec::new()};
     sphere.load("assets/mesh/cube.stl");
-
     let mut player = player::Player{mesh: sphere, pos: ORIGIN};
-
     let mut vertices = Vec::new();
     for vertex in &player.mesh.vertices {
         vertices.extend_from_slice(&mut vertex.as_array().as_slice());
     }
 
     let mut camera = camera::Camera {
-        eye: glm::vec3(0.0, 1.0, 1.0),
+        eye: glm::vec3(0.0, 1.0, 3.0),
         center: glm::vec3(0.0, 0.5, 0.0),
-        up: glm::vec3(0.0,1.0,0.0),
+        up: glm::vec3(0.0,PI/3.0,-0.5),
         fov: PI/3.0,
         aspect: 1.0,
         near: 0.1,
@@ -42,7 +42,7 @@ pub fn main() {
     window.make_current();
 
     while !window.should_close() {
-
+        
         let t_mat = glm::ext::translate(&glm::Matrix4::<f32>::one(), player.pos);
 
         unsafe {
@@ -60,7 +60,7 @@ pub fn main() {
                 (vertices.len() * std::mem::size_of::<f32>()) as isize,
                 vertices.as_ptr().cast(),
                 gl::STATIC_DRAW);
-
+    
             gl::VertexAttribPointer(
                 0,
                 3,
@@ -162,11 +162,12 @@ pub fn main() {
                 gl::FALSE,
                 &t_mat[0][0]
             );
+            
             gl::DeleteShader(vs);
             gl::DeleteShader(fs);
             window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
             for (_, event) in glfw::flush_messages(&events) {
-                handle_window_event(&mut window, event, &mut player);
+                handle_window_event(&mut window, event, &mut player, &mut camera);
             }
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::DrawArrays(gl::TRIANGLES, 0, vertices.len() as i32);
@@ -177,7 +178,7 @@ pub fn main() {
     }
 }
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, player: &mut player::Player) {
+fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, player: &mut player::Player, camera:&mut camera::Camera) {
     match event {
         glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
             window.set_should_close(true)
@@ -193,6 +194,20 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, play
         }
         glfw::WindowEvent::Key(Key::D, _, Action::Repeat, _) => {
             player.mv(glm::vec3(MOVEMENT_DELTA,0.0,0.0));
+        }
+        glfw::WindowEvent::Key(Key::J, _, Action::Repeat, _) => {
+            camera.center[0] -= CAMERA_DELTA;
+        }
+        glfw::WindowEvent::Key(Key::L, _, Action::Repeat, _) => {
+            camera.center[0] +=CAMERA_DELTA;
+        }
+        glfw::WindowEvent::Key(Key::I, _, Action::Repeat, _) => {
+            camera.center[2] -= CAMERA_DELTA;
+            camera.eye[2] -= CAMERA_DELTA;
+        }
+        glfw::WindowEvent::Key(Key::K, _, Action::Repeat, _) => {
+            camera.center[2] += CAMERA_DELTA;
+            camera.eye[2] += CAMERA_DELTA;
         }
         _ => {}
     }   
