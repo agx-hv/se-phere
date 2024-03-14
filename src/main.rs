@@ -4,6 +4,7 @@ extern crate glm;
 extern crate num_traits;
 use crate::num_traits::One;
 use glfw::{Action, Context, Key};
+use num_traits::ToPrimitive;
 use std::{f32::consts::PI, process::CommandEnvs};
 pub mod camera; // camera stuff
 pub mod meshloader; 
@@ -32,7 +33,8 @@ pub fn main() {
         near: 0.1,
         far: 100.0,
     };
-
+    //keys
+    let mut keystates = (0,0,0,0,0,0,0,0);
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
 
     let (mut window, events) = glfw.create_window(800, 800, "Se-Phere!", glfw::WindowMode::Windowed)
@@ -167,49 +169,87 @@ pub fn main() {
             gl::DeleteShader(fs);
             window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
             for (_, event) in glfw::flush_messages(&events) {
-                handle_window_event(&mut window, event, &mut player, &mut camera);
+                handle_window_event(&mut window, event, &mut player, &mut camera, &mut keystates);
             }
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::DrawArrays(gl::TRIANGLES, 0, vertices.len() as i32);
             glfw.poll_events();
             window.swap_buffers();
         }
+        player.mv(glm::vec3( (keystates.1-keystates.3)as f32*-MOVEMENT_DELTA, 0.0,(keystates.0-keystates.2)as f32*-MOVEMENT_DELTA));
+        camera.center[0] -= CAMERA_DELTA*(keystates.5-keystates.7)as f32;
+        camera.center[2] -= CAMERA_DELTA*(keystates.4-keystates.6)as f32;
+        camera.eye[2] -= CAMERA_DELTA*(keystates.4-keystates.6)as f32;
 
     }
 }
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, player: &mut player::Player, camera:&mut camera::Camera) {
-    match event {
-        glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-            window.set_should_close(true)
+fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, player: &mut player::Player, camera:&mut camera::Camera, keystates:&mut (i32,i32,i32,i32,i32,i32,i32,i32)) {
+    //keystate update (w,a,s,d,i,j,k,l)
+    if let glfw::WindowEvent::Key(key, _, action, _) = event {
+        if action == Action::Press {
+            if key == Key::W {
+                keystates.0 =1;
+            } 
+            if key == Key::A {
+                keystates.1 =1;
+            } 
+            if key == Key::S {
+                keystates.2 =1;
+            }  
+    
+            if key == Key::D {
+                keystates.3 =1;
+            } 
+            if key == Key::I {
+                keystates.4 =1;
+            } 
+            if key == Key::J {
+                keystates.5 =1;
+            }
+            if key == Key::K {
+                keystates.6 =1;
+            }
+            if key == Key::L {
+                keystates.7 =1;
+            }
+            if key == Key::Escape {
+                window.set_should_close(true);
+            }
         }
-        glfw::WindowEvent::Key(Key::W, _, Action::Repeat, _) => {
-            player.mv(glm::vec3(0.0,0.0,-MOVEMENT_DELTA));
+        if action == Action::Release {
+            if key == Key::W {
+                keystates.0 =0;
+            } 
+            if key == Key::A {
+                keystates.1 =0;
+            } 
+            if key == Key::S {
+                keystates.2 =0;
+            }  
+    
+            if key == Key::D {
+                keystates.3 =0;
+            } 
+            if key == Key::I {
+                keystates.4 =0;
+            } 
+            if key == Key::J {
+                keystates.5 =0;
+            }
+            if key == Key::K {
+                keystates.6 =0;
+            }
+            if key == Key::L {
+                keystates.7 =0;
+            }
+            if key == Key::Escape {
+                window.set_should_close(true);
+            }
         }
-        glfw::WindowEvent::Key(Key::S, _, Action::Repeat, _) => {
-            player.mv(glm::vec3(0.0,0.0,MOVEMENT_DELTA));
-        }
-        glfw::WindowEvent::Key(Key::A, _, Action::Repeat, _) => {
-            player.mv(glm::vec3(-MOVEMENT_DELTA,0.0,0.0));
-        }
-        glfw::WindowEvent::Key(Key::D, _, Action::Repeat, _) => {
-            player.mv(glm::vec3(MOVEMENT_DELTA,0.0,0.0));
-        }
-        glfw::WindowEvent::Key(Key::J, _, Action::Repeat, _) => {
-            camera.center[0] -= CAMERA_DELTA;
-        }
-        glfw::WindowEvent::Key(Key::L, _, Action::Repeat, _) => {
-            camera.center[0] +=CAMERA_DELTA;
-        }
-        glfw::WindowEvent::Key(Key::I, _, Action::Repeat, _) => {
-            camera.center[2] -= CAMERA_DELTA;
-            camera.eye[2] -= CAMERA_DELTA;
-        }
-        glfw::WindowEvent::Key(Key::K, _, Action::Repeat, _) => {
-            camera.center[2] += CAMERA_DELTA;
-            camera.eye[2] += CAMERA_DELTA;
-        }
-        _ => {}
-    }   
-    dbg!(player.pos);
+
+    //matrix update
+    
+    }
+    //dbg!(player.pos);
 }
