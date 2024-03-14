@@ -34,7 +34,7 @@ pub fn main() {
         far: 100.0,
     };
     //keys
-    let mut keystates = (0,0,0,0,0,0,0,0);
+    let mut keystates = [0,0,0,0,0,0,0,0];
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
 
     let (mut window, events) = glfw.create_window(800, 800, "Se-Phere!", glfw::WindowMode::Windowed)
@@ -176,10 +176,10 @@ pub fn main() {
             glfw.poll_events();
             window.swap_buffers();
         }
-        player.mv(glm::vec3( (keystates.1-keystates.3)as f32*-MOVEMENT_DELTA, 0.0,(keystates.0-keystates.2)as f32*-MOVEMENT_DELTA));
-        camera.center[0] -= CAMERA_DELTA*(keystates.5-keystates.7)as f32;
-        camera.center[2] -= CAMERA_DELTA*(keystates.4-keystates.6)as f32;
-        camera.eye[2] -= CAMERA_DELTA*(keystates.4-keystates.6)as f32;
+        player.mv(glm::vec3( (keystates[1]-keystates[3])as f32*-MOVEMENT_DELTA, 0.0,(keystates[0]-keystates[2])as f32*-MOVEMENT_DELTA));
+        camera.center[0] -= CAMERA_DELTA*(keystates[5]-keystates[7])as f32;
+        camera.center[2] -= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
+        camera.eye[2] -= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
         camera.mvhelper(player.pos,player.vec);
         player.mvhelper();
  
@@ -187,72 +187,32 @@ pub fn main() {
     }
 }
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, player: &mut player::Player, camera:&mut camera::Camera, keystates:&mut (i32,i32,i32,i32,i32,i32,i32,i32)) {
-    //keystate update (w,a,s,d,i,j,k,l)
-    if let glfw::WindowEvent::Key(key, _, action, _) = event {
-        if action == Action::Press {
-            if key == Key::W {
-                keystates.0 =1;
-            } 
-            if key == Key::A {
-                keystates.1 =1;
-            } 
-            if key == Key::S {
-                keystates.2 =1;
-            }  
-    
-            if key == Key::D {
-                keystates.3 =1;
-            } 
-            if key == Key::I {
-                keystates.4 =1;
-            } 
-            if key == Key::J {
-                keystates.5 =1;
-            }
-            if key == Key::K {
-                keystates.6 =1;
-            }
-            if key == Key::L {
-                keystates.7 =1;
-            }
-            if key == Key::Escape {
-                window.set_should_close(true);
-            }
+fn handle_key_event(window: &mut glfw::Window, key: Key, action: Action, keystates: &mut [i32; 8]) {
+    let index = match key {
+        Key::W => 0, //modular mapping system
+        Key::A => 1,
+        Key::S => 2,
+        Key::D => 3,
+        Key::I => 4,
+        Key::J => 5,
+        Key::K => 6,
+        Key::L => 7,
+        Key::Escape => {
+            window.set_should_close(true);
+            return;
         }
-        if action == Action::Release {
-            if key == Key::W {
-                keystates.0 =0;
-            } 
-            if key == Key::A {
-                keystates.1 =0;
-            } 
-            if key == Key::S {
-                keystates.2 =0;
-            }  
-    
-            if key == Key::D {
-                keystates.3 =0;
-            } 
-            if key == Key::I {
-                keystates.4 =0;
-            } 
-            if key == Key::J {
-                keystates.5 =0;
-            }
-            if key == Key::K {
-                keystates.6 =0;
-            }
-            if key == Key::L {
-                keystates.7 =0;
-            }
-            if key == Key::Escape {
-                window.set_should_close(true);
-            }
+        _ => {
+            999
         }
-
-    //matrix update
-    
+    };
+    if index != 999 {
+        keystates[index] = if action == Action::Press { 1 } else { 0 };
     }
-    //dbg!(player.pos);
+}
+
+fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, player: &mut player::Player, camera:&mut camera::Camera,
+    keystates:&mut [i32; 8]) {
+    if let glfw::WindowEvent::Key(key, _, action, _) = event {
+        handle_key_event(window, key, action, keystates);
+    }
 }
