@@ -12,13 +12,13 @@ pub mod player;
 
 
 const ORIGIN: glm::Vector3<f32> = glm::Vector3{ x: 0.0, y: 0.0, z: 0.0 };
-const MOVEMENT_DELTA: f32 = 0.05;
+const MOVEMENT_DELTA: f32 = 0.005;
 const CAMERA_DELTA: f32 = 0.1;
 
 pub fn main() {
     let mut sphere = meshloader::Mesh{vertices: Vec::new()};
     sphere.load("assets/mesh/cube.stl");
-    let mut player = player::Player{mesh: sphere, pos: ORIGIN};
+    let mut player = player::Player{mesh: sphere, pos: ORIGIN, vec: ORIGIN};
     let mut vertices = Vec::new();
     for vertex in &player.mesh.vertices {
         vertices.extend_from_slice(&mut vertex.as_array().as_slice());
@@ -180,6 +180,9 @@ pub fn main() {
         camera.center[0] -= CAMERA_DELTA*(keystates.5-keystates.7)as f32;
         camera.center[2] -= CAMERA_DELTA*(keystates.4-keystates.6)as f32;
         camera.eye[2] -= CAMERA_DELTA*(keystates.4-keystates.6)as f32;
+        camera.mvhelper(player.pos,player.vec);
+        player.mvhelper();
+ 
 
     }
 }

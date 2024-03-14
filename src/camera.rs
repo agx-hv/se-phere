@@ -18,4 +18,14 @@ impl Camera {
         let p_mat = perspective::<f32>(self.fov, self.aspect, self.near, self.far);
         p_mat * v_mat
     }
+    pub fn mvhelper(&mut self, p_pos: Vector3<f32>, p_vec: Vector3<f32>) {
+        const vec_delta: f32 = 0.01;
+        self.center.x += ((p_pos.x-self.center.x))*vec_delta;
+        self.center.y = p_pos.y;
+        self.center.x += ((p_pos.x-self.center.x))*vec_delta;
+
+        self.eye.x += ((p_vec.x-self.eye.x))*vec_delta;
+        self.eye.z += ((p_vec.z-self.eye.z))*vec_delta;
+        
+    }
 }
