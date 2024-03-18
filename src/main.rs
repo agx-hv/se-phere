@@ -10,7 +10,7 @@ pub mod camera;
 pub mod meshloader; 
 pub mod player; 
 pub mod utils;
-
+pub mod keys;
 
 const ORIGIN: glm::Vector3<f32> = glm::Vector3{ x: 0.0, y: 0.0, z: 0.0 };
 const MOVEMENT_DELTA: f32 = 0.001;
@@ -194,32 +194,10 @@ pub fn main() {
     }
 }
 
-fn handle_key_event(window: &mut glfw::Window, key: Key, action: Action, keystates: &mut [i32; 8]) {
-    let index = match key {
-        Key::W => 0, //modular mapping system
-        Key::A => 1,
-        Key::S => 2,
-        Key::D => 3,
-        Key::I => 4,
-        Key::J => 5,
-        Key::K => 6,
-        Key::L => 7,
-        Key::Escape => {
-            window.set_should_close(true);
-            return;
-        }
-        _ => {
-            999
-        }
-    };
-    if index != 999 {
-        keystates[index] = if action == Action::Release { 0 } else { 1 };
-    }
-}
 
 fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, player: &mut player::Player, camera:&mut camera::Camera,
     keystates:&mut [i32; 8]) {
     if let glfw::WindowEvent::Key(key, _, action, _) = event {
-        handle_key_event(window, key, action, keystates);
+        keys::handle_key_event(window, key, action, keystates);
     }
 }
