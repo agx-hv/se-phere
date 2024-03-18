@@ -1,29 +1,32 @@
 extern crate gl;
 use gl::*;
-use gl::types::GLenum;
+use gl::types::{GLenum, GLuint};
 
-pub struct Shader {
-    pub shader: GLenum,
+pub struct ShaderProgram {
+    pub vs: GLenum,
+    pub fs: GLenum,
+    pub program: GLuint,
 }
 
-impl Shader {
-    pub unsafe fn new(shader_type: GLenum, shader_path: &str) -> Self {
-        let shader = CreateShader(shader_type);
-        let source = std::fs::read_to_string(shader_path).expect(format!("Shader File: {shader_path} not found!", shader_path=shader_path).as_str());
+impl ShaderProgram {
+    pub unsafe fn new(vs_path: &str, fs_path: &str) -> Self {
+        let vs = CreateShader(VERTEX_SHADER);
+        let fs = CreateShader(FRAGMENT_SHADER);
+        let vs_source = std::fs::read_to_string(vs_path).expect(format!("Shader File: {shader_path} not found!", shader_path=vs_path).as_str());
         ShaderSource(
-            shader,
+            vs,
             1,
-            &(source.as_bytes().as_ptr().cast()),
-            &(source.len().try_into().unwrap()),
+            &(vs_source.as_bytes().as_ptr().cast()),
+            &(vs_source.len().try_into().unwrap()),
         );
-        CompileShader(shader);
+        CompileShader(vs);
         let mut success = 0;
-        GetShaderiv(shader, COMPILE_STATUS, &mut success);
+        GetShaderiv(vs, COMPILE_STATUS, &mut success);
         if success == 0 {
             let mut v: Vec<u8> = Vec::with_capacity(1024);
             let mut log_len = 0_i32;
             gl::GetShaderInfoLog(
-                shader,
+                vs,
                 1024,
                 &mut log_len,
                 v.as_mut_ptr().cast(),
@@ -31,8 +34,53 @@ impl Shader {
             v.set_len(log_len.try_into().unwrap());
             panic!("Vertex Compile Error: {}", String::from_utf8_lossy(&v));
         }
+        let fs_source = std::fs::read_to_string(fs_path).expect(format!("Shader File: {shader_path} not found!", shader_path=fs_path).as_str());
+        ShaderSource(
+            fs,
+            1,
+            &(fs_source.as_bytes().as_ptr().cast()),
+            &(fs_source.len().try_into().unwrap()),
+        );
+        CompileShader(fs);
+        let mut success = 0;
+        GetShaderiv(fs, COMPILE_STATUS, &mut success);
+        if success == 0 {
+            let mut v: Vec<u8> = Vec::with_capacity(1024);
+            let mut log_len = 0_i32;
+            GetShaderInfoLog(
+                fs,
+                1024,
+                &mut log_len,
+                v.as_mut_ptr().cast(),
+            );
+            v.set_len(log_len.try_into().unwrap());
+            panic!("Vertex Compile Error: {}", String::from_utf8_lossy(&v));
+        }
+        let program = CreateProgram();
+        AttachShader(program, vs);
+        AttachShader(program, fs);
+        LinkProgram(program);
+        let mut success = 0;
+        GetProgramiv(program, gl::LINK_STATUS, &mut success);
+        if success == 0 {
+            let mut v: Vec<u8> = Vec::with_capacity(1024);
+            let mut log_len = 0_i32;
+            GetProgramInfoLog(
+                program,
+                1024,
+                &mut log_len,
+                v.as_mut_ptr().cast(),
+            );
+            v.set_len(log_len.try_into().unwrap());
+            panic!("Program Link Error: {}", String::from_utf8_lossy(&v));
+        }
+        UseProgram(program);
+        DeleteShader(vs);
+        DeleteShader(fs);
         Self {
-            shader: shader,
+            vs: vs,
+            fs: fs,
+            program: program
         }
     }
 }

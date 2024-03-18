@@ -70,41 +70,19 @@ pub fn main() {
             0 as *const _,
         );
         gl::EnableVertexAttribArray(0);
-        let vs = shader::Shader::new(gl::VERTEX_SHADER, "src/shaders/ambient.vs");
-        let fs = shader::Shader::new(gl::FRAGMENT_SHADER, "src/shaders/ambient.fs");
-        let shader_program = gl::CreateProgram();
-        gl::AttachShader(shader_program, vs.shader);
-        gl::AttachShader(shader_program, fs.shader);
-        gl::LinkProgram(shader_program);
-        let mut success = 0;
-        gl::GetProgramiv(shader_program, gl::LINK_STATUS, &mut success);
-        if success == 0 {
-            let mut v: Vec<u8> = Vec::with_capacity(1024);
-            let mut log_len = 0_i32;
-            gl::GetProgramInfoLog(
-                shader_program,
-                1024,
-                &mut log_len,
-                v.as_mut_ptr().cast(),
-            );
-            v.set_len(log_len.try_into().unwrap());
-            panic!("Program Link Error: {}", String::from_utf8_lossy(&v));
-        }
-        gl::UseProgram(shader_program);
-        gl::DeleteShader(vs.shader);
-        gl::DeleteShader(fs.shader);
+        let shader_program = shader::ShaderProgram::new("src/shaders/basic.vs", "src/shaders/basic.fs");
 
         while !window.should_close() {
 
             let t_mat = glm::ext::translate(&glm::Matrix4::<f32>::one(), player.pos);
-            let pv_loc = gl::GetUniformLocation(shader_program, b"pv\0".as_ptr() as *const i8);
+            let pv_loc = gl::GetUniformLocation(shader_program.program, b"pv\0".as_ptr() as *const i8);
             gl::UniformMatrix4fv(
                 pv_loc,
                 1,
                 gl::FALSE,
                 &camera.pv_mat()[0][0]
             );
-            let model_loc = gl::GetUniformLocation(shader_program, b"model\0".as_ptr() as *const i8);
+            let model_loc = gl::GetUniformLocation(shader_program.program, b"model\0".as_ptr() as *const i8);
             gl::UniformMatrix4fv(
                 model_loc,
                 1,
