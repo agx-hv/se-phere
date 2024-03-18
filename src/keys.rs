@@ -1,6 +1,6 @@
 
 extern crate glfw;
-use glfw::{Action, Context, Key};
+use glfw::{Action, Key};
 
 pub fn handle_key_event(window: &mut glfw::Window, key: Key, action: Action, keystates: &mut [i32; 8]) {
     let index = match key {
