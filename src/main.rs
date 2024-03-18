@@ -45,37 +45,33 @@ pub fn main() {
     window.set_key_polling(true);
     window.make_current();
 
-    while !window.should_close() {
-        
-        let t_mat = glm::ext::translate(&glm::Matrix4::<f32>::one(), player.pos);
+    unsafe {
+        let mut vao = 0u32;
+        let mut vbo = 0u32;
+        gl::load_with(|f_name| window.get_proc_address(f_name));
+        gl::ClearColor(0.2, 0.3, 0.3, 1.0);
+        gl::GenVertexArrays(1, &mut vao);
+        assert_ne!(vao,0);
+        gl::BindVertexArray(vao);
+        gl::GenBuffers(1, &mut vbo);
+        assert_ne!(vbo,0);
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::BufferData(gl::ARRAY_BUFFER, 
+            (vertices.len() * std::mem::size_of::<f32>()) as isize,
+            vertices.as_ptr().cast(),
+            gl::STATIC_DRAW);
 
-        unsafe {
-            let mut vao = 0u32;
-            let mut vbo = 0u32;
-            gl::load_with(|f_name| window.get_proc_address(f_name));
-            gl::ClearColor(0.2, 0.3, 0.3, 1.0);
-            gl::GenVertexArrays(1, &mut vao);
-            assert_ne!(vao,0);
-            gl::BindVertexArray(vao);
-            gl::GenBuffers(1, &mut vbo);
-            assert_ne!(vbo,0);
-            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-            gl::BufferData(gl::ARRAY_BUFFER, 
-                (vertices.len() * std::mem::size_of::<f32>()) as isize,
-                vertices.as_ptr().cast(),
-                gl::STATIC_DRAW);
-    
-            gl::VertexAttribPointer(
-                0,
-                3,
-                gl::FLOAT,
-                gl::FALSE,
-                (3*std::mem::size_of::<f32>()).try_into().unwrap(),
-                0 as *const _,
-            );
-            gl::EnableVertexAttribArray(0);
-            let vs = gl::CreateShader(gl::VERTEX_SHADER);
-            const VERT_SHADER: &str = r#"#version 330 core
+        gl::VertexAttribPointer(
+            0,
+            3,
+            gl::FLOAT,
+            gl::FALSE,
+            (3*std::mem::size_of::<f32>()).try_into().unwrap(),
+            0 as *const _,
+        );
+        gl::EnableVertexAttribArray(0);
+        let vs = gl::CreateShader(gl::VERTEX_SHADER);
+        const VERT_SHADER: &str = r#"#version 330 core
               layout (location = 0) in vec3 aPos;
               uniform mat4 pv;
               uniform mat4 model;
@@ -152,41 +148,48 @@ pub fn main() {
                 panic!("Program Link Error: {}", String::from_utf8_lossy(&v));
             }
             gl::UseProgram(shader_program);
-            let pv_loc = gl::GetUniformLocation(shader_program, b"pv\0".as_ptr() as *const i8);
-            gl::UniformMatrix4fv(
-                pv_loc,
-                1,
-                gl::FALSE,
-                &camera.pv_mat()[0][0]
-            );
-            let model_loc = gl::GetUniformLocation(shader_program, b"model\0".as_ptr() as *const i8);
-            gl::UniformMatrix4fv(
-                model_loc,
-                1,
-                gl::FALSE,
-                &t_mat[0][0]
-            );
-            
             gl::DeleteShader(vs);
             gl::DeleteShader(fs);
-            window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
-            for (_, event) in glfw::flush_messages(&events) {
-                handle_window_event(&mut window, event, &mut player, &mut camera, &mut keystates);
+
+
+            while !window.should_close() {
+
+                let t_mat = glm::ext::translate(&glm::Matrix4::<f32>::one(), player.pos);
+                dbg!(t_mat);
+
+                let pv_loc = gl::GetUniformLocation(shader_program, b"pv\0".as_ptr() as *const i8);
+                gl::UniformMatrix4fv(
+                    pv_loc,
+                    1,
+                    gl::FALSE,
+                    &camera.pv_mat()[0][0]
+                );
+                let model_loc = gl::GetUniformLocation(shader_program, b"model\0".as_ptr() as *const i8);
+                gl::UniformMatrix4fv(
+                    model_loc,
+                    1,
+                    gl::FALSE,
+                    &t_mat[0][0]
+                );
+
+                window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
+                for (_, event) in glfw::flush_messages(&events) {
+                    handle_window_event(&mut window, event, &mut player, &mut camera, &mut keystates);
+                }
+                gl::Clear(gl::COLOR_BUFFER_BIT);
+                gl::DrawArrays(gl::TRIANGLES, 0, vertices.len() as i32);
+                glfw.poll_events();
+                window.swap_buffers();
+                player.mv(glm::vec3( (keystates[1]-keystates[3])as f32*-MOVEMENT_DELTA, 0.0,(keystates[0]-keystates[2])as f32*-MOVEMENT_DELTA));
+                camera.center[0] -= CAMERA_DELTA*(keystates[5]-keystates[7])as f32;
+                camera.center[2] -= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
+                camera.eye[2] -= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
+
+                player.mvhelper();
+                // camera.mvhelper(player.pos,player.vec);
+                //dbg!(player.pos);
             }
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-            gl::DrawArrays(gl::TRIANGLES, 0, vertices.len() as i32);
-            glfw.poll_events();
-            window.swap_buffers();
-        }
-        player.mv(glm::vec3( (keystates[1]-keystates[3])as f32*-MOVEMENT_DELTA, 0.0,(keystates[0]-keystates[2])as f32*-MOVEMENT_DELTA));
-        camera.center[0] -= CAMERA_DELTA*(keystates[5]-keystates[7])as f32;
-        camera.center[2] -= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
-        camera.eye[2] -= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
-        
-        player.mvhelper();
-        // camera.mvhelper(player.pos,player.vec);
-        // dbg!(player.pos);
- 
+
 
     }
 }
@@ -210,7 +213,7 @@ fn handle_key_event(window: &mut glfw::Window, key: Key, action: Action, keystat
         }
     };
     if index != 999 {
-        keystates[index] = if action == Action::Press { 1 } else { 0 };
+        keystates[index] = if action == Action::Release { 0 } else { 1 };
     }
 }
 
