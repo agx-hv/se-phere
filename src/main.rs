@@ -6,6 +6,7 @@ use crate::num_traits::One;
 use glfw::{Action, Context, Key};
 use num_traits::ToPrimitive;
 use std::{f32::consts::PI, process::CommandEnvs};
+pub mod shader;
 pub mod camera; 
 pub mod meshloader; 
 pub mod player; 
@@ -60,7 +61,6 @@ pub fn main() {
             (vertices.len() * std::mem::size_of::<f32>()) as isize,
             vertices.as_ptr().cast(),
             gl::STATIC_DRAW);
-
         gl::VertexAttribPointer(
             0,
             3,
@@ -70,125 +70,65 @@ pub fn main() {
             0 as *const _,
         );
         gl::EnableVertexAttribArray(0);
-        let vs = gl::CreateShader(gl::VERTEX_SHADER);
-        const VERT_SHADER: &str = r#"#version 330 core
-              layout (location = 0) in vec3 aPos;
-              uniform mat4 pv;
-              uniform mat4 model;
-              void main() {
-                gl_Position = pv * model * vec4(aPos, 1.0);
-              }
-            "#;
-            gl::ShaderSource(
-                vs,
-                1,
-                &(VERT_SHADER.as_bytes().as_ptr().cast()),
-                &(VERT_SHADER.len().try_into().unwrap()),
+        let vs = shader::Shader::new(gl::VERTEX_SHADER, "src/shaders/ambient.vs");
+        let fs = shader::Shader::new(gl::FRAGMENT_SHADER, "src/shaders/ambient.fs");
+        let shader_program = gl::CreateProgram();
+        gl::AttachShader(shader_program, vs.shader);
+        gl::AttachShader(shader_program, fs.shader);
+        gl::LinkProgram(shader_program);
+        let mut success = 0;
+        gl::GetProgramiv(shader_program, gl::LINK_STATUS, &mut success);
+        if success == 0 {
+            let mut v: Vec<u8> = Vec::with_capacity(1024);
+            let mut log_len = 0_i32;
+            gl::GetProgramInfoLog(
+                shader_program,
+                1024,
+                &mut log_len,
+                v.as_mut_ptr().cast(),
             );
-            gl::CompileShader(vs);
-            let mut success = 0;
-            gl::GetShaderiv(vs, gl::COMPILE_STATUS, &mut success);
-            if success == 0 {
-                let mut v: Vec<u8> = Vec::with_capacity(1024);
-                let mut log_len = 0_i32;
-                gl::GetShaderInfoLog(
-                    vs,
-                    1024,
-                    &mut log_len,
-                    v.as_mut_ptr().cast(),
-                );
-                v.set_len(log_len.try_into().unwrap());
-                panic!("Vertex Compile Error: {}", String::from_utf8_lossy(&v));
-            }
-            let fs = gl::CreateShader(gl::FRAGMENT_SHADER);
-            const FRAG_SHADER: &str = r#"#version 330 core
-              out vec4 final_color;
+            v.set_len(log_len.try_into().unwrap());
+            panic!("Program Link Error: {}", String::from_utf8_lossy(&v));
+        }
+        gl::UseProgram(shader_program);
+        gl::DeleteShader(vs.shader);
+        gl::DeleteShader(fs.shader);
 
-              void main() {
-                final_color = vec4(1.0, 0.5, 0.2, 1.0);
-              }
-            "#;
-            gl::ShaderSource(
-                fs,
+        while !window.should_close() {
+
+            let t_mat = glm::ext::translate(&glm::Matrix4::<f32>::one(), player.pos);
+            let pv_loc = gl::GetUniformLocation(shader_program, b"pv\0".as_ptr() as *const i8);
+            gl::UniformMatrix4fv(
+                pv_loc,
                 1,
-                &(FRAG_SHADER.as_bytes().as_ptr().cast()),
-                &(FRAG_SHADER.len().try_into().unwrap()),
+                gl::FALSE,
+                &camera.pv_mat()[0][0]
             );
-            gl::CompileShader(fs);
-            let mut success = 0;
-            gl::GetShaderiv(fs, gl::COMPILE_STATUS, &mut success);
-            if success == 0 {
-                let mut v: Vec<u8> = Vec::with_capacity(1024);
-                let mut log_len = 0_i32;
-                gl::GetShaderInfoLog(
-                    fs,
-                    1024,
-                    &mut log_len,
-                    v.as_mut_ptr().cast(),
-                );
-                v.set_len(log_len.try_into().unwrap());
-                panic!("Fragment Compile Error: {}", String::from_utf8_lossy(&v));
+            let model_loc = gl::GetUniformLocation(shader_program, b"model\0".as_ptr() as *const i8);
+            gl::UniformMatrix4fv(
+                model_loc,
+                1,
+                gl::FALSE,
+                &t_mat[0][0]
+            );
+
+            window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
+            for (_, event) in glfw::flush_messages(&events) {
+                handle_window_event(&mut window, event, &mut player, &mut camera, &mut keystates);
             }
-            let shader_program = gl::CreateProgram();
-            gl::AttachShader(shader_program, vs);
-            gl::AttachShader(shader_program, fs);
-            gl::LinkProgram(shader_program);
-            let mut success = 0;
-            gl::GetProgramiv(shader_program, gl::LINK_STATUS, &mut success);
-            if success == 0 {
-                let mut v: Vec<u8> = Vec::with_capacity(1024);
-                let mut log_len = 0_i32;
-                gl::GetProgramInfoLog(
-                    shader_program,
-                    1024,
-                    &mut log_len,
-                    v.as_mut_ptr().cast(),
-                );
-                v.set_len(log_len.try_into().unwrap());
-                panic!("Program Link Error: {}", String::from_utf8_lossy(&v));
-            }
-            gl::UseProgram(shader_program);
-            gl::DeleteShader(vs);
-            gl::DeleteShader(fs);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::DrawArrays(gl::TRIANGLES, 0, vertices.len() as i32);
+            glfw.poll_events();
+            window.swap_buffers();
+            player.mv(glm::vec3( (keystates[1]-keystates[3])as f32*-MOVEMENT_DELTA, 0.0,(keystates[0]-keystates[2])as f32*-MOVEMENT_DELTA));
+            camera.center[0] -= CAMERA_DELTA*(keystates[5]-keystates[7])as f32;
+            camera.center[2] -= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
+            camera.eye[2] -= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
 
-
-            while !window.should_close() {
-
-                let t_mat = glm::ext::translate(&glm::Matrix4::<f32>::one(), player.pos);
-                dbg!(t_mat);
-
-                let pv_loc = gl::GetUniformLocation(shader_program, b"pv\0".as_ptr() as *const i8);
-                gl::UniformMatrix4fv(
-                    pv_loc,
-                    1,
-                    gl::FALSE,
-                    &camera.pv_mat()[0][0]
-                );
-                let model_loc = gl::GetUniformLocation(shader_program, b"model\0".as_ptr() as *const i8);
-                gl::UniformMatrix4fv(
-                    model_loc,
-                    1,
-                    gl::FALSE,
-                    &t_mat[0][0]
-                );
-
-                window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
-                for (_, event) in glfw::flush_messages(&events) {
-                    handle_window_event(&mut window, event, &mut player, &mut camera, &mut keystates);
-                }
-                gl::Clear(gl::COLOR_BUFFER_BIT);
-                gl::DrawArrays(gl::TRIANGLES, 0, vertices.len() as i32);
-                glfw.poll_events();
-                window.swap_buffers();
-                player.mv(glm::vec3( (keystates[1]-keystates[3])as f32*-MOVEMENT_DELTA, 0.0,(keystates[0]-keystates[2])as f32*-MOVEMENT_DELTA));
-                camera.center[0] -= CAMERA_DELTA*(keystates[5]-keystates[7])as f32;
-                camera.center[2] -= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
-                camera.eye[2] -= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
-
-                player.mvhelper();
-                // camera.mvhelper(player.pos,player.vec);
-                //dbg!(player.pos);
-            }
+            player.mvhelper();
+            // camera.mvhelper(player.pos,player.vec);
+            //dbg!(player.pos);
+        }
 
 
     }
