@@ -19,7 +19,7 @@ const CAMERA_DELTA: f32 = 0.1;
 
 pub fn main() {
     let mut sphere = meshloader::Mesh{vertices: Vec::new()};
-    sphere.load("assets/mesh/sephere.stl");
+    sphere.load("assets/mesh/cube.stl");
     let mut player = player::Player{mesh: sphere, pos: ORIGIN, vec: ORIGIN};
     let mut sphere_vertices = Vec::new();
     for vertex in &player.mesh.vertices {
@@ -32,16 +32,17 @@ pub fn main() {
         cube_vertices.extend_from_slice(&mut vertex.as_array().as_slice());
     }
 
-    let mut camera = camera::Camera {
-        eye: glm::vec3(0.0, 1.0, 3.0),
-        center: glm::vec3(0.0, 0.5, 0.0),
-        up: glm::vec3(0.0,PI/3.0,-0.5),
+    let mut camera = camera::PlayerCamera {
+        player_pos: glm::vec3(0.0, 1.0, 3.0),
+        camera_angle: 0.0, // 0 to 2pi
+        tilt: 0.0, //0 to pi pls
+        radius: 2.0,
         fov: PI/3.0,
         aspect: 1.0,
         near: 0.1,
         far: 100.0,
-        vec: ORIGIN
     };
+
     //keys
     let mut keystates = [0,0,0,0,0,0,0,0];
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
@@ -154,12 +155,12 @@ pub fn main() {
             }
             window.swap_buffers();
             player.mv(glm::vec3( (keystates[1]-keystates[3])as f32*-MOVEMENT_DELTA, 0.0,(keystates[0]-keystates[2])as f32*-MOVEMENT_DELTA));
-            camera.center[0] -= CAMERA_DELTA*(keystates[5]-keystates[7])as f32;
-            camera.center[2] -= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
-            camera.eye[2] -= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
+            camera.player_pos=player.pos;
+            camera.camera_angle += CAMERA_DELTA*(keystates[5]-keystates[7])as f32;
+            camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
 
             player.mvhelper();
-            //camera.mvhelper(player.pos,player.vec);
+            
             //dbg!(player.pos);
         }
 
@@ -168,7 +169,7 @@ pub fn main() {
 }
 
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, player: &mut player::Player, camera:&mut camera::Camera,
+fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, player: &mut player::Player, camera:&mut camera::PlayerCamera,
     keystates:&mut [i32; 8]) {
     if let glfw::WindowEvent::Key(key, _, action, _) = event {
         keys::handle_key_event(window, key, action, keystates);

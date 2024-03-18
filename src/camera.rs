@@ -44,10 +44,9 @@ impl Camera {
 
 pub struct PlayerCamera {
     pub player_pos: Vector3<f32>,
-    pub camera_angle: f32, // 
+    pub camera_angle: f32, // 0 to 2pi
     pub tilt: f32, //0 to pi pls
     pub radius: f32,
-    pub up: Vector3<f32>,
     pub fov: f32,
     pub aspect: f32,
     pub near: f32,
@@ -56,25 +55,35 @@ pub struct PlayerCamera {
 }
 
 impl PlayerCamera{
-        pub fn pv_mat(&mut self) -> Matrix4<f32> {
-            // keep camera at bounderies
-            while self.camera_angle >= 2.0*PI{
-                self.tilt -= 2.0*PI;
-            }
-            while self.tilt < 0.0{
-                self.tilt += 2.0*PI;
-            }
+    pub fn view_mat(&mut self) -> Matrix4<f32> {
+        if self.camera_angle<0.0{
+            self.camera_angle += 2.0*PI;
+        }
+        self.camera_angle=self.camera_angle%(2.0*PI);
+        if self.tilt > PI/2.0{
+            self.tilt = PI/2.0;
+        }
+        else if self.tilt < 1e-6{
+            self.tilt = 1e-6; //prevent edge case of completely flat camera
+        }
+        let eye: Vector3<f32> = glm::vec3(
+            self.radius*sin(self.camera_angle)*cos(self.tilt),
+            self.radius*sin(self.tilt),
+            self.radius*cos(self.camera_angle)*cos(self.tilt),
+            )
+            +self.player_pos;
 
-            while self.tilt > PI{
-                self.tilt = PI;
-            }
-            while self.tilt < 0.0{
-                self.tilt = 0.0;
-            }
-            let eye: Vector3<f32> = glm::vec3(self.radius*cos(self.camera_angle)*sin(self.tilt),self.radius*sin(self.camera_angle)*sin(self.tilt),self.radius*cos(self.tilt));
-            
-            let v_mat = look_at::<f32>(eye, self.player_pos, self.up);
-            let p_mat = perspective::<f32>(self.fov, self.aspect, self.near, self.far);
-            p_mat * v_mat
+        let up: Vector3<f32> = glm::normalize(glm::vec3(
+            self.radius*sin(self.camera_angle)*-sin(self.tilt),
+            self.radius*sin(self.tilt),
+            self.radius*cos(self.camera_angle)*-sin(self.tilt),
+            )
+            );
+
+        look_at::<f32>(eye, self.player_pos, up)
+        
+    }
+    pub fn proj_mat(&mut self) -> Matrix4<f32> {
+        perspective::<f32>(self.fov, self.aspect, self.near, self.far)
     }
 }
