@@ -19,11 +19,17 @@ const CAMERA_DELTA: f32 = 0.1;
 
 pub fn main() {
     let mut sphere = meshloader::Mesh{vertices: Vec::new()};
-    sphere.load("assets/mesh/cube.stl");
+    sphere.load("assets/mesh/sephere.stl");
     let mut player = player::Player{mesh: sphere, pos: ORIGIN, vec: ORIGIN};
-    let mut vertices = Vec::new();
+    let mut sphere_vertices = Vec::new();
     for vertex in &player.mesh.vertices {
-        vertices.extend_from_slice(&mut vertex.as_array().as_slice());
+        sphere_vertices.extend_from_slice(&mut vertex.as_array().as_slice());
+    }
+    let mut cube = meshloader::Mesh{vertices: Vec::new()};
+    cube.load("assets/mesh/cube.stl");
+    let mut cube_vertices = Vec::new();
+    for vertex in &cube.vertices {
+        cube_vertices.extend_from_slice(&mut vertex.as_array().as_slice());
     }
 
     let mut camera = camera::Camera {
@@ -45,58 +51,107 @@ pub fn main() {
 
     window.set_key_polling(true);
     window.make_current();
+    gl::load_with(|f_name| window.get_proc_address(f_name));
 
     unsafe {
-        let mut vao = 0u32;
-        let mut vbo = 0u32;
-        gl::load_with(|f_name| window.get_proc_address(f_name));
+        gl::Enable(gl::DEPTH_TEST);
+        let mut sphere_vao = 0u32;
+        let mut cube_vao = 0u32;
+        let mut cube_vbo = 0u32;
+        let mut sphere_vbo = 0u32;
         gl::ClearColor(0.2, 0.3, 0.3, 1.0);
-        gl::GenVertexArrays(1, &mut vao);
-        assert_ne!(vao,0);
-        gl::BindVertexArray(vao);
-        gl::GenBuffers(1, &mut vbo);
-        assert_ne!(vbo,0);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+
+        gl::GenVertexArrays(1, &mut sphere_vao);
+        assert_ne!(sphere_vao,0);
+        gl::BindVertexArray(sphere_vao);
+
+        gl::GenBuffers(1, &mut sphere_vbo);
+        assert_ne!(sphere_vbo,0);
+        gl::BindBuffer(gl::ARRAY_BUFFER, sphere_vbo);
+
         gl::BufferData(gl::ARRAY_BUFFER, 
-            (vertices.len() * std::mem::size_of::<f32>()) as isize,
-            vertices.as_ptr().cast(),
+            (sphere_vertices.len() * std::mem::size_of::<f32>()) as isize,
+            sphere_vertices.as_ptr().cast(),
             gl::STATIC_DRAW);
         gl::VertexAttribPointer(
             0,
             3,
             gl::FLOAT,
             gl::FALSE,
-            (3*std::mem::size_of::<f32>()).try_into().unwrap(),
+            (6*std::mem::size_of::<f32>()).try_into().unwrap(),
             0 as *const _,
         );
         gl::EnableVertexAttribArray(0);
-        let shader_program = shader::ShaderProgram::new("src/shaders/basic.vs", "src/shaders/basic.fs");
+        gl::VertexAttribPointer(
+            1,
+            3,
+            gl::FLOAT,
+            gl::FALSE,
+            (6*std::mem::size_of::<f32>()).try_into().unwrap(),
+            (3*std::mem::size_of::<f32>()) as *const _,
+        );
+        gl::EnableVertexAttribArray(1);
+
+        gl::GenVertexArrays(1, &mut cube_vao);
+        assert_ne!(cube_vao,0);
+        gl::BindVertexArray(cube_vao);
+
+        gl::GenBuffers(1, &mut cube_vbo);
+        assert_ne!(cube_vbo,0);
+        gl::BindBuffer(gl::ARRAY_BUFFER, cube_vbo);
+
+        gl::BufferData(gl::ARRAY_BUFFER, 
+            (cube_vertices.len() * std::mem::size_of::<f32>()) as isize,
+            cube_vertices.as_ptr().cast(),
+            gl::STATIC_DRAW);
+        gl::VertexAttribPointer(
+            0,
+            3,
+            gl::FLOAT,
+            gl::FALSE,
+            (6*std::mem::size_of::<f32>()).try_into().unwrap(),
+            0 as *const _,
+        );
+        gl::EnableVertexAttribArray(0);
+        gl::VertexAttribPointer(
+            1,
+            3,
+            gl::FLOAT,
+            gl::FALSE,
+            (6*std::mem::size_of::<f32>()).try_into().unwrap(),
+            (3*std::mem::size_of::<f32>()) as *const _,
+        );
+        gl::EnableVertexAttribArray(1);
+
+        let lighting_program = shader::ShaderProgram::new("src/shaders/lighting.vs", "src/shaders/lighting.fs");
+
 
         while !window.should_close() {
 
             let t_mat = glm::ext::translate(&glm::Matrix4::<f32>::one(), player.pos);
-            let pv_loc = gl::GetUniformLocation(shader_program.program, b"pv\0".as_ptr() as *const i8);
-            gl::UniformMatrix4fv(
-                pv_loc,
-                1,
-                gl::FALSE,
-                &camera.pv_mat()[0][0]
-            );
-            let model_loc = gl::GetUniformLocation(shader_program.program, b"model\0".as_ptr() as *const i8);
-            gl::UniformMatrix4fv(
-                model_loc,
-                1,
-                gl::FALSE,
-                &t_mat[0][0]
-            );
 
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+
+            lighting_program.setMat4f(b"proj\0",&camera.proj_mat()[0][0]);
+            lighting_program.setMat4f(b"view\0",&camera.view_mat()[0][0]);
+            lighting_program.setMat4f(b"model\0",&t_mat[0][0]);
+            lighting_program.setVec3f(b"objectColor\0", 0.8, 0.3, 0.1);
+            lighting_program.setVec3f(b"lightColor\0", 1.0, 1.0, 1.0);
+            lighting_program.setVec3f(b"lightPos\0", 0.8, 2.0, 1.5);
+            gl::BindVertexArray(sphere_vao);
+            gl::DrawArrays(gl::TRIANGLES, 0, sphere_vertices.len() as i32);
+
+            lighting_program.setMat4f(b"model\0",&glm::Matrix4::<f32>::one()[0][0]);
+            lighting_program.setVec3f(b"objectColor\0", 0.1, 0.3, 0.6);
+
+            gl::BindVertexArray(cube_vao);
+            gl::DrawArrays(gl::TRIANGLES, 0, cube_vertices.len() as i32);
+
+            glfw.poll_events();
             window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
             for (_, event) in glfw::flush_messages(&events) {
                 handle_window_event(&mut window, event, &mut player, &mut camera, &mut keystates);
             }
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-            gl::DrawArrays(gl::TRIANGLES, 0, vertices.len() as i32);
-            glfw.poll_events();
             window.swap_buffers();
             player.mv(glm::vec3( (keystates[1]-keystates[3])as f32*-MOVEMENT_DELTA, 0.0,(keystates[0]-keystates[2])as f32*-MOVEMENT_DELTA));
             camera.center[0] -= CAMERA_DELTA*(keystates[5]-keystates[7])as f32;
@@ -104,7 +159,7 @@ pub fn main() {
             camera.eye[2] -= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
 
             player.mvhelper();
-            // camera.mvhelper(player.pos,player.vec);
+            //camera.mvhelper(player.pos,player.vec);
             //dbg!(player.pos);
         }
 

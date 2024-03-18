@@ -17,10 +17,11 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn pv_mat(&mut self) -> Matrix4<f32> {
-        let v_mat = look_at::<f32>(self.eye, self.center, self.up);
-        let p_mat = perspective::<f32>(self.fov, self.aspect, self.near, self.far);
-        p_mat * v_mat
+    pub fn view_mat(&mut self) -> Matrix4<f32> {
+        look_at::<f32>(self.eye, self.center, self.up)
+    }
+    pub fn proj_mat(&mut self) -> Matrix4<f32> {
+        perspective::<f32>(self.fov, self.aspect, self.near, self.far)
     }
 
     pub fn mvhelper(&mut self, p_pos: Vector3<f32>, p_vec: Vector3<f32>) {

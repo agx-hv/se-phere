@@ -12,10 +12,14 @@ impl Mesh {
         let mesh = stl_io::read_stl(&mut file).unwrap();
 
         for face in mesh.faces {
+            let n = face.normal;
             for i in face.vertices {
                 let v = mesh.vertices[i as usize];
                 self.vertices.push(
                     glm::vec3(v[0], v[1], v[2])
+                );
+                self.vertices.push(
+                    glm::vec3(n[0], n[1], n[2])
                 );
             }
         }

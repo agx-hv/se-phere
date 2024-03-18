@@ -1,6 +1,6 @@
 extern crate gl;
 use gl::*;
-use gl::types::{GLenum, GLuint};
+use gl::types::*;
 
 pub struct ShaderProgram {
     pub vs: GLenum,
@@ -82,5 +82,23 @@ impl ShaderProgram {
             fs: fs,
             program: program
         }
+    }
+    pub unsafe fn setMat4f(&self, loc: &[u8], value: *const GLfloat) {
+        let loc = gl::GetUniformLocation(self.program, loc.as_ptr() as *const i8);
+        gl::UniformMatrix4fv(
+            loc,
+            1,
+            gl::FALSE,
+            value,
+        );
+    }
+    pub unsafe fn setVec3f(&self, loc: &[u8], v0: GLfloat, v1: GLfloat, v2: GLfloat) {
+        let loc = gl::GetUniformLocation(self.program, loc.as_ptr() as *const i8);
+        gl::Uniform3f(
+            loc,
+            v0,
+            v1,
+            v2,
+        );
     }
 }
