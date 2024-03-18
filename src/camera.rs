@@ -22,7 +22,7 @@ impl Camera {
         p_mat * v_mat
     }
     pub fn mvhelper(&mut self, p_pos: Vector3<f32>, p_vec: Vector3<f32>) {
-        xyz_plus_xyz(self.vec,p_vec);
+        xyz_plus_xyz(&mut self.vec,p_vec);
 
         const CAM_DELTA: f32 = 0.01;
         self.eye.x += self.vec.x * CAM_DELTA;

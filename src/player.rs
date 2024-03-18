@@ -19,9 +19,10 @@ impl Player {
         self.vec.z += t_vec.z;
     }
     pub fn mvhelper(&mut self) {
-        self.pos.x += self.vec.x;
-        self.pos.y += self.vec.y;
-        self.pos.z += self.vec.z;
+        // self.pos.x += self.vec.x;
+        // self.pos.y += self.vec.y;
+        // self.pos.z += self.vec.z;
+        xyz_plus_xyz(&mut self.pos,self.vec);
 
         const VEC_DELTA: f32 = 0.95;
         self.vec.x *= VEC_DELTA; // You can adjust the factor (0.9) to control the speed of reduction
