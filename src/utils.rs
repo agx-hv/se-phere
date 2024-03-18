@@ -1,0 +1,15 @@
+extern crate glm;
+use glm::*;
+
+
+pub fn xyz_plus_xyz(mut target: Vector3<f32>, hunter: Vector3<f32>) {
+    target.x += hunter.x;
+    target.y += hunter.y;
+    target.z += hunter.z;
+}
+
+pub fn xyz_times_n(mut target: Vector3<f32>, n: f32) {
+    target.x *= n;
+    target.y *= n;
+    target.z *= n;
+}

@@ -6,13 +6,14 @@ use crate::num_traits::One;
 use glfw::{Action, Context, Key};
 use num_traits::ToPrimitive;
 use std::{f32::consts::PI, process::CommandEnvs};
-pub mod camera; // camera stuff
+pub mod camera; 
 pub mod meshloader; 
 pub mod player; 
+pub mod utils;
 
 
 const ORIGIN: glm::Vector3<f32> = glm::Vector3{ x: 0.0, y: 0.0, z: 0.0 };
-const MOVEMENT_DELTA: f32 = 0.005;
+const MOVEMENT_DELTA: f32 = 0.001;
 const CAMERA_DELTA: f32 = 0.1;
 
 pub fn main() {
@@ -32,6 +33,7 @@ pub fn main() {
         aspect: 1.0,
         near: 0.1,
         far: 100.0,
+        vec: ORIGIN
     };
     //keys
     let mut keystates = [0,0,0,0,0,0,0,0];
@@ -180,8 +182,10 @@ pub fn main() {
         camera.center[0] -= CAMERA_DELTA*(keystates[5]-keystates[7])as f32;
         camera.center[2] -= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
         camera.eye[2] -= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
-        camera.mvhelper(player.pos,player.vec);
+        
         player.mvhelper();
+        // camera.mvhelper(player.pos,player.vec);
+        // dbg!(player.pos);
  
 
     }

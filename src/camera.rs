@@ -1,6 +1,7 @@
 extern crate glm;
 use glm::*;
 use glm::ext::*;
+use crate::utils::*;
 
 pub struct Camera {
     pub eye: Vector3<f32>,
@@ -10,6 +11,8 @@ pub struct Camera {
     pub aspect: f32,
     pub near: f32,
     pub far: f32,
+
+    pub vec: Vector3<f32>,
 }
 
 impl Camera {
@@ -19,17 +22,18 @@ impl Camera {
         p_mat * v_mat
     }
     pub fn mvhelper(&mut self, p_pos: Vector3<f32>, p_vec: Vector3<f32>) {
-        const vec_delta: f32 = 0.01;
-        self.center.x += ((p_pos.x-self.center.x))*vec_delta;
-        self.center.y += ((p_pos.y-self.center.y))*vec_delta;
-        self.center.z += ((p_pos.z-self.center.z))*vec_delta;
+        xyz_plus_xyz(self.vec,p_vec);
 
-        // self.eye.x += ((p_vec.x-self.eye.x))*vec_delta;
-        // self.eye.z += ((p_vec.z-self.eye.z))*vec_delta;
+        const CAM_DELTA: f32 = 0.01;
+        self.eye.x += self.vec.x * CAM_DELTA;
+        self.center.x += self.center.x * CAM_DELTA;
+        self.eye.y += self.vec.y * CAM_DELTA;
+        self.eye.z += self.vec.z * CAM_DELTA;
+        self.center.z += self.center.z * CAM_DELTA;
 
-        self.eye.x += p_vec.x;
-        self.eye.y += p_vec.y;
-        self.eye.z += p_vec.z;
+        self.vec.x *= 1.0 - CAM_DELTA;
+        self.vec.y *= 1.0 - CAM_DELTA;
+        self.vec.z *= 1.0 - CAM_DELTA;
         
     }
 }

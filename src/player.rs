@@ -2,6 +2,7 @@ extern crate glm;
 use glm::*;
 use glm::ext::*;
 use crate::num_traits::One;
+use crate::utils::*;
 
 pub struct Player{
     pub mesh: crate::meshloader::Mesh,
@@ -22,9 +23,9 @@ impl Player {
         self.pos.y += self.vec.y;
         self.pos.z += self.vec.z;
 
-        const vec_delta: f32 = 0.95;
-        self.vec.x *= vec_delta; // You can adjust the factor (0.9) to control the speed of reduction
-        self.vec.y *= vec_delta;
-        self.vec.z *= vec_delta;
+        const VEC_DELTA: f32 = 0.95;
+        self.vec.x *= VEC_DELTA; // You can adjust the factor (0.9) to control the speed of reduction
+        self.vec.y *= VEC_DELTA;
+        self.vec.z *= VEC_DELTA;
     }
 }
