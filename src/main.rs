@@ -51,13 +51,15 @@ pub fn main() {
         far: 100.0};
 
     //keys
-    let mut keystates = [0,0,0,0,0,0,0,0];
+    let mut keystates = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
 
     let (mut window, events) = glfw.create_window(SCR_W as u32, SCR_H as u32, "Se-Phere!", glfw::WindowMode::Windowed)
         .expect("Failed to create GLFW window.");
 
     window.set_key_polling(true);
+    window.set_cursor_pos_polling(true);
+    window.set_scroll_polling(true);
     window.make_current();
     gl::load_with(|f_name| window.get_proc_address(f_name));
 
@@ -172,7 +174,7 @@ pub fn main() {
             camera.player_pos=player.pos;
             camera.camera_angle += (if glm::abs(player.vec.x) > 0.0001 || glm::abs(player.vec.z) > 0.0001 {1}
                 else {keystates[0]-keystates[2]}) as f32 * CAMERA_DELTA * (keystates[1]-keystates[3]) as f32;
-            camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[6]) as f32;
+            camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[5]) as f32;
             
 
             thread::sleep(DELTA_TIME);
@@ -185,8 +187,14 @@ pub fn main() {
 
 
 fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, player: &mut player::Player, camera:&mut camera::PlayerCamera,
-    keystates:&mut [i32; 8]) {
-    if let glfw::WindowEvent::Key(key, _, action, _) = event {
-        keys::handle_key_event(window, key, action, keystates);
-    }
+    keystates:&mut [i8; 16]) {
+    match event {
+        glfw::WindowEvent::Key(key,_,action,modifier) =>{
+            keys::handle_key_event(window, key, action,modifier, keystates);}
+
+        glfw::WindowEvent::MouseButton(mouse_button,action,modifier) =>{
+            keys::handle_mouse_button(window,mouse_button,action,modifier,keystates);}
+        _=>{}
+    } 
+
 }
