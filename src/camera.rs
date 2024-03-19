@@ -43,10 +43,10 @@ impl Camera {
 
 
 pub struct PlayerCamera {
-    pub player_pos: Vector3<f32>,
-    pub camera_angle: f32, // 0 to 2pi
+    pub player_pos: Vector3<f32>, //players coords
+    pub camera_angle: f32, // 0 to 2pi, 0 is behind player
     pub tilt: f32, // 0 to pi - tilt from ground to bird's eye
-    pub radius: f32,
+    pub radius: f32, // camera distance away from player
     pub fov: f32,
     pub aspect: f32,
     pub near: f32,
@@ -57,11 +57,11 @@ pub struct PlayerCamera {
 impl PlayerCamera{
     pub fn view_mat(&mut self) -> Matrix4<f32> {
         if self.camera_angle<0.0{
-            self.camera_angle += 2.0*PI;
+            self.camera_angle += 2.0*PI; //alows for camera to spin horinzontaly constantly around player while preventing int overflow
         }
         self.camera_angle=self.camera_angle%(2.0*PI);
         if self.tilt > PI/2.0{
-            self.tilt = PI/2.0;
+            self.tilt = PI/2.0; //clip max tilt to 90deg
         }
         else if self.tilt < 1e-6{
             self.tilt = 1e-6; //prevent edge case of completely flat camera
