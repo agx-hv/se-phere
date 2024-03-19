@@ -15,12 +15,15 @@ pub mod keys;
 
 const ORIGIN: glm::Vector3<f32> = glm::Vector3{ x: 0.0, y: 0.0, z: 0.0 };
 const MOVEMENT_DELTA: f32 = 0.001;
-const CAMERA_DELTA: f32 = 0.1;
+const CAMERA_DELTA: f32 = 0.01;
 
 pub fn main() {
     let mut sphere = meshloader::Mesh{vertices: Vec::new()};
-    sphere.load("assets/mesh/cube.stl");
-    let mut player = player::Player{mesh: sphere, pos: ORIGIN, vec: ORIGIN};
+    sphere.load("assets/mesh/sephere.stl");
+    let mut player = player::Player{
+        mesh: sphere,
+        pos: glm::vec3(0.1, 0.0, 0.3),
+        vec: glm::vec3(0.0, 0.0, 0.0)};
     let mut sphere_vertices = Vec::new();
     for vertex in &player.mesh.vertices {
         sphere_vertices.extend_from_slice(&mut vertex.as_array().as_slice());
@@ -35,13 +38,12 @@ pub fn main() {
     let mut camera = camera::PlayerCamera {
         player_pos: glm::vec3(0.0, 1.0, 3.0),
         camera_angle: 0.0, // 0 to 2pi
-        tilt: 0.0, //0 to pi pls
+        tilt: 1.0, //0 to pi pls
         radius: 2.0,
         fov: PI/3.0,
         aspect: 1.0,
         near: 0.1,
-        far: 100.0,
-    };
+        far: 100.0};
 
     //keys
     let mut keystates = [0,0,0,0,0,0,0,0];
