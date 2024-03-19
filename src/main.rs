@@ -12,6 +12,9 @@ pub mod meshloader;
 pub mod player; 
 pub mod utils;
 pub mod keys;
+use std::{thread, time};
+
+const DELTA_TIME: time::Duration = time::Duration::from_millis(16);
 
 const ORIGIN: glm::Vector3<f32> = glm::Vector3{ x: 0.0, y: 0.0, z: 0.0 };
 const MOVEMENT_DELTA: f32 = 0.001;
@@ -162,7 +165,8 @@ pub fn main() {
             camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
 
             player.mvhelper();
-            
+
+            thread::sleep(DELTA_TIME);
             //dbg!(player.pos);
         }
 
