@@ -19,6 +19,8 @@ const DELTA_TIME: time::Duration = time::Duration::from_millis(16);
 const ORIGIN: glm::Vector3<f32> = glm::Vector3{ x: 0.0, y: 0.0, z: 0.0 };
 const MOVEMENT_DELTA: f32 = 0.001;
 const CAMERA_DELTA: f32 = 0.01;
+const SCR_W: f32 = 1920.0;
+const SCR_H: f32 = 1080.0;
 
 pub fn main() {
     let mut sphere = meshloader::Mesh{vertices: Vec::new()};
@@ -44,7 +46,7 @@ pub fn main() {
         tilt: 1.0, //0 to pi pls
         radius: 2.0,
         fov: PI/3.0,
-        aspect: 1.0,
+        aspect: SCR_W/SCR_H,
         near: 0.1,
         far: 100.0};
 
@@ -52,7 +54,7 @@ pub fn main() {
     let mut keystates = [0,0,0,0,0,0,0,0];
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
 
-    let (mut window, events) = glfw.create_window(800, 800, "Se-Phere!", glfw::WindowMode::Windowed)
+    let (mut window, events) = glfw.create_window(SCR_W as u32, SCR_H as u32, "Se-Phere!", glfw::WindowMode::Windowed)
         .expect("Failed to create GLFW window.");
 
     window.set_key_polling(true);
