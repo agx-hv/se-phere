@@ -43,7 +43,7 @@ pub fn main() {
     let mut camera = camera::PlayerCamera {
         player_pos: glm::vec3(0.0, 1.0, 3.0),
         camera_angle: 0.0, // 0 to 2pi
-        tilt: 1.0, //0 to pi pls
+        tilt: 0.6, //0 to pi
         radius: 2.0,
         fov: PI/3.0,
         aspect: SCR_W/SCR_H,
@@ -161,12 +161,19 @@ pub fn main() {
                 handle_window_event(&mut window, event, &mut player, &mut camera, &mut keystates);
             }
             window.swap_buffers();
-            player.mv(glm::vec3( (keystates[1]-keystates[3])as f32*-MOVEMENT_DELTA, 0.0,(keystates[0]-keystates[2])as f32*-MOVEMENT_DELTA));
+            
+            // player loop
+            player.mv(glm::vec3(
+                (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*glm::sin(camera.camera_angle), 0.0, // use camera angle as direction
+                (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*glm::cos(camera.camera_angle))); // for the player to move towards
+            player.mvhelper(); 
+            
+            // camera loop
             camera.player_pos=player.pos;
-            camera.camera_angle += CAMERA_DELTA*(keystates[5]-keystates[7])as f32;
-            camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[6])as f32;
-
-            player.mvhelper();
+            camera.camera_angle += (if glm::abs(player.vec.x) > 0.0001 || glm::abs(player.vec.z) > 0.0001 {1}
+                else {keystates[0]-keystates[2]}) as f32 * CAMERA_DELTA * (keystates[1]-keystates[3]) as f32;
+            camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[6]) as f32;
+            
 
             thread::sleep(DELTA_TIME);
             //dbg!(player.pos);

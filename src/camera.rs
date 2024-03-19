@@ -45,7 +45,7 @@ impl Camera {
 pub struct PlayerCamera {
     pub player_pos: Vector3<f32>,
     pub camera_angle: f32, // 0 to 2pi
-    pub tilt: f32, //0 to pi pls
+    pub tilt: f32, // 0 to pi - tilt from ground to bird's eye
     pub radius: f32,
     pub fov: f32,
     pub aspect: f32,
