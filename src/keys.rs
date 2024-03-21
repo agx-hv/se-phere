@@ -20,7 +20,7 @@ pub fn handle_key_event(window: &mut glfw::Window, key: Key, action: Action,modi
         keystates[index] = if action == Action::Release { 0 } else { 1};
     }
 }
-pub fn handle_mouse_button(window: &mut glfw::Window, mouse_button: MouseButton, action: Action,modifier:Modifiers, keystates: &mut [i8; 16]) {
+pub fn handle_mouse_button(mouse_button: MouseButton, action: Action,modifier:Modifiers, keystates: &mut [i8; 16]) {
     let index = match mouse_button { //modular mapping system
         MouseButton::Button1 => 10, // leftclick, mesh shit go down
         MouseButton::Button2 => 11, // rightclick,mesh shit go up

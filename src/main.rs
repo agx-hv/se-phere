@@ -5,6 +5,7 @@ extern crate num_traits;
 use crate::num_traits::One;
 use glfw::{Action, Context, Key};
 use num_traits::ToPrimitive;
+use std::fmt::Debug;
 use std::{f32::consts::PI, process::CommandEnvs};
 pub mod shader;
 pub mod camera; 
@@ -21,6 +22,8 @@ const MOVEMENT_DELTA: f32 = 0.001;
 const CAMERA_DELTA: f32 = 0.01;
 const SCR_W: f32 = 1920.0;
 const SCR_H: f32 = 1080.0;
+const PAN_TRESHOLD_RATIO:f64=0.1; //how close to the edge before panning
+const TILT_TRESHOLD_RATIO:f64=0.1; //how close to the edge before tilting
 
 pub fn main() {
     let mut sphere = meshloader::Mesh{vertices: Vec::new()};
@@ -58,6 +61,7 @@ pub fn main() {
         .expect("Failed to create GLFW window.");
 
     window.set_key_polling(true);
+    window.set_mouse_button_polling(true);
     window.set_cursor_pos_polling(true);
     window.set_scroll_polling(true);
     window.make_current();
@@ -139,6 +143,7 @@ pub fn main() {
         while !window.should_close() {
 
             let t_mat = glm::ext::translate(&glm::Matrix4::<f32>::one(), player.pos);
+            let (mut width,mut height) = window.get_size(); //get window width and height
 
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
@@ -160,7 +165,7 @@ pub fn main() {
             glfw.poll_events();
             window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
             for (_, event) in glfw::flush_messages(&events) {
-                handle_window_event(&mut window, event, &mut player, &mut camera, &mut keystates);
+                handle_window_event(&mut window, event, &mut keystates);
             }
             window.swap_buffers();
             
@@ -175,7 +180,27 @@ pub fn main() {
             camera.camera_angle += (if glm::abs(player.vec.x) > 0.0001 || glm::abs(player.vec.z) > 0.0001 {1}
                 else {keystates[0]-keystates[2]}) as f32 * CAMERA_DELTA * (keystates[1]-keystates[3]) as f32;
             camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[5]) as f32;
-            
+            let (x, y) =  window.get_cursor_pos();
+            //mouse control
+            if x < width as f64 * PAN_TRESHOLD_RATIO{
+                camera.camera_angle += CAMERA_DELTA;
+            }
+            else if x > width as f64 * (1.0-PAN_TRESHOLD_RATIO){
+                camera.camera_angle -= CAMERA_DELTA;
+            }
+
+            if y < height as f64 * TILT_TRESHOLD_RATIO{
+                camera.tilt -= CAMERA_DELTA;
+            }
+            else if y > height as f64 * (1.0-TILT_TRESHOLD_RATIO){
+                camera.tilt += CAMERA_DELTA;
+            }
+
+
+            //mouse tracking
+            if keystates[10]>0{
+                dbg!(window.get_cursor_pos());
+            }
 
             thread::sleep(DELTA_TIME);
             //dbg!(player.pos);
@@ -186,14 +211,14 @@ pub fn main() {
 }
 
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, player: &mut player::Player, camera:&mut camera::PlayerCamera,
+fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent,
     keystates:&mut [i8; 16]) {
     match event {
         glfw::WindowEvent::Key(key,_,action,modifier) =>{
             keys::handle_key_event(window, key, action,modifier, keystates);}
 
         glfw::WindowEvent::MouseButton(mouse_button,action,modifier) =>{
-            keys::handle_mouse_button(window,mouse_button,action,modifier,keystates);}
+            keys::handle_mouse_button(mouse_button,action,modifier,keystates);}
         _=>{}
     } 
 
