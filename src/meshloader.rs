@@ -1,9 +1,11 @@
 extern crate stl_io;
-extern crate glm;
+extern crate glam;
+use glam::vec3a;
+use glam::f32::Vec3A;
 use std::fs::OpenOptions;
 
 pub struct Mesh {
-    pub vertices: Vec<glm::Vector3<f32>>,
+    pub vertices: Vec<Vec3A>,
 }
 
 impl Mesh {
@@ -16,10 +18,10 @@ impl Mesh {
             for i in face.vertices {
                 let v = mesh.vertices[i as usize];
                 self.vertices.push(
-                    glm::vec3(v[0], v[1], v[2])
+                    vec3a(v[0], v[1], v[2])
                 );
                 self.vertices.push(
-                    glm::vec3(n[0], n[1], n[2])
+                    vec3a(n[0], n[1], n[2])
                 );
             }
         }

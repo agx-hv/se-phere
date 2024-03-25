@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 gl = "0.14.0"
+glam = "0.27.0"
 glfw = "0.55.0"
-glm = "0.2.3"
 num-traits = "0.2.18"
 stl_io = "0.7.0"

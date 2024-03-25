@@ -1,31 +1,30 @@
-extern crate glm;
-use glm::*;
-use glm::ext::*;
-use crate::utils::*;
+extern crate glam;
+use glam::vec3a;
+use glam::f32::{Mat4, Vec3A};
 use std::f32::consts::PI;
 
 pub struct Camera {
-    pub eye: Vector3<f32>,
-    pub center: Vector3<f32>,
-    pub up: Vector3<f32>,
+    pub eye: Vec3A,
+    pub center: Vec3A,
+    pub up: Vec3A,
     pub fov: f32,
     pub aspect: f32,
     pub near: f32,
     pub far: f32,
 
-    pub vec: Vector3<f32>,
+    pub vec: Vec3A,
 }
 
 impl Camera {
-    pub fn view_mat(&mut self) -> Matrix4<f32> {
-        look_at::<f32>(self.eye, self.center, self.up)
+    pub fn view_mat(&mut self) -> Mat4 {
+        Mat4::look_at_rh(self.eye.into(), self.center.into(), self.up.into())
     }
-    pub fn proj_mat(&mut self) -> Matrix4<f32> {
-        perspective::<f32>(self.fov, self.aspect, self.near, self.far)
+    pub fn proj_mat(&mut self) -> Mat4 {
+        Mat4::perspective_rh(self.fov.into(), self.aspect.into(), self.near.into(), self.far.into())
     }
 
-    pub fn mvhelper(&mut self, p_pos: Vector3<f32>, p_vec: Vector3<f32>) {
-        xyz_plus_xyz(&mut self.vec,p_vec);
+    pub fn mvhelper(&mut self, p_pos: Vec3A, p_vec: Vec3A) {
+        self.vec += p_vec;
 
         const CAM_DELTA: f32 = 0.01;
         self.eye.x += self.vec.x * CAM_DELTA;
@@ -43,7 +42,7 @@ impl Camera {
 
 
 pub struct PlayerCamera {
-    pub player_pos: Vector3<f32>, //players coords
+    pub player_pos: Vec3A, //players coords
     pub camera_angle: f32, // 0 to 2pi, 0 is behind player
     pub tilt: f32, // 0 to pi - tilt from ground to bird's eye
     pub radius: f32, // camera distance away from player
@@ -55,7 +54,7 @@ pub struct PlayerCamera {
 }
 
 impl PlayerCamera{
-    pub fn view_mat(&mut self) -> Matrix4<f32> {
+    pub fn view_mat(&mut self) -> Mat4 {
         if self.camera_angle<0.0{
             self.camera_angle += 2.0*PI; //alows for camera to spin horinzontaly constantly around player while preventing int overflow
         }
@@ -66,24 +65,24 @@ impl PlayerCamera{
         else if self.tilt < 1e-6{
             self.tilt = 1e-6; //prevent edge case of completely flat camera
         }
-        let eye: Vector3<f32> = glm::vec3(
-            self.radius*sin(self.camera_angle)*cos(self.tilt),
-            self.radius*sin(self.tilt),
-            self.radius*cos(self.camera_angle)*cos(self.tilt),
+        let eye: Vec3A = vec3a(
+            self.radius*f32::sin(self.camera_angle)*f32::cos(self.tilt),
+            self.radius*f32::sin(self.tilt),
+            self.radius*f32::cos(self.camera_angle)*f32::cos(self.tilt),
             )
             +self.player_pos;
 
-        let up: Vector3<f32> = glm::normalize(glm::vec3(
-            self.radius*sin(self.camera_angle)*-sin(self.tilt),
-            self.radius*sin(self.tilt),
-            self.radius*cos(self.camera_angle)*-sin(self.tilt),
+        let up: Vec3A = Vec3A::normalize(vec3a(
+            self.radius*f32::sin(self.camera_angle)*-f32::sin(self.tilt),
+            self.radius*f32::sin(self.tilt),
+            self.radius*f32::cos(self.camera_angle)*-f32::sin(self.tilt),
             )
             );
 
-        look_at::<f32>(eye, self.player_pos, up)
+        Mat4::look_at_rh(eye.into(), self.player_pos.into(), up.into())
         
     }
-    pub fn proj_mat(&mut self) -> Matrix4<f32> {
-        perspective::<f32>(self.fov, self.aspect, self.near, self.far)
+    pub fn proj_mat(&mut self) -> Mat4 {
+        Mat4::perspective_rh(self.fov.into(), self.aspect.into(), self.near.into(), self.far.into())
     }
 }

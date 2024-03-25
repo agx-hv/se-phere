@@ -1,8 +1,10 @@
 extern crate glfw;
 extern crate gl;
-extern crate glm;
+extern crate glam;
 extern crate num_traits;
 use crate::num_traits::One;
+use glam::vec3a;
+use glam::f32::{Vec3A, Mat4};
 use glfw::{Action, Context, Key};
 use num_traits::ToPrimitive;
 use std::fmt::Debug;
@@ -11,13 +13,12 @@ pub mod shader;
 pub mod camera; 
 pub mod meshloader; 
 pub mod player; 
-pub mod utils;
 pub mod keys;
 use std::{thread, time};
 
 const DELTA_TIME: time::Duration = time::Duration::from_millis(16);
 
-const ORIGIN: glm::Vector3<f32> = glm::Vector3{ x: 0.0, y: 0.0, z: 0.0 };
+const ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0);
 const MOVEMENT_DELTA: f32 = 0.001;
 const CAMERA_DELTA: f32 = 0.01;
 const SCR_W: f32 = 1920.0;
@@ -30,21 +31,21 @@ pub fn main() {
     sphere.load("assets/mesh/sephere.stl");
     let mut player = player::Player{
         mesh: sphere,
-        pos: glm::vec3(0.1, 0.0, 0.3),
-        vec: glm::vec3(0.0, 0.0, 0.0)};
+        pos: vec3a(0.1, 0.0, 0.3),
+        vec: vec3a(0.0, 0.0, 0.0)};
     let mut sphere_vertices = Vec::new();
     for vertex in &player.mesh.vertices {
-        sphere_vertices.extend_from_slice(&mut vertex.as_array().as_slice());
+        sphere_vertices.extend_from_slice(&mut vertex.to_array().as_slice());
     }
     let mut cube = meshloader::Mesh{vertices: Vec::new()};
     cube.load("assets/mesh/cube.stl");
     let mut cube_vertices = Vec::new();
     for vertex in &cube.vertices {
-        cube_vertices.extend_from_slice(&mut vertex.as_array().as_slice());
+        cube_vertices.extend_from_slice(&mut vertex.to_array().as_slice());
     }
 
     let mut camera = camera::PlayerCamera {
-        player_pos: glm::vec3(0.0, 1.0, 3.0),
+        player_pos: vec3a(0.0, 1.0, 3.0),
         camera_angle: 0.0, // 0 to 2pi
         tilt: 0.6, //0 to pi
         radius: 2.0,
@@ -142,21 +143,21 @@ pub fn main() {
 
         while !window.should_close() {
 
-            let t_mat = glm::ext::translate(&glm::Matrix4::<f32>::one(), player.pos);
+            let t_mat = Mat4::from_translation(player.pos.into());
             let (mut width,mut height) = window.get_size(); //get window width and height
 
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-            lighting_program.setMat4f(b"proj\0",&camera.proj_mat()[0][0]);
-            lighting_program.setMat4f(b"view\0",&camera.view_mat()[0][0]);
-            lighting_program.setMat4f(b"model\0",&t_mat[0][0]);
+            lighting_program.setMat4f(b"proj\0",&camera.proj_mat().to_cols_array()[0]);
+            lighting_program.setMat4f(b"view\0",&camera.view_mat().to_cols_array()[0]);
+            lighting_program.setMat4f(b"model\0",&t_mat.to_cols_array()[0]);
             lighting_program.setVec3f(b"objectColor\0", 0.8, 0.3, 0.1);
             lighting_program.setVec3f(b"lightColor\0", 1.0, 1.0, 1.0);
             lighting_program.setVec3f(b"lightPos\0", 0.8, 2.0, 1.5);
             gl::BindVertexArray(sphere_vao);
             gl::DrawArrays(gl::TRIANGLES, 0, sphere_vertices.len() as i32);
 
-            lighting_program.setMat4f(b"model\0",&glm::Matrix4::<f32>::one()[0][0]);
+            lighting_program.setMat4f(b"model\0",&Mat4::IDENTITY.to_cols_array()[0]);
             lighting_program.setVec3f(b"objectColor\0", 0.1, 0.3, 0.6);
 
             gl::BindVertexArray(cube_vao);
@@ -170,14 +171,14 @@ pub fn main() {
             window.swap_buffers();
             
             // player loop
-            player.mv(glm::vec3(
-                (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*glm::sin(camera.camera_angle), 0.0, // use camera angle as direction
-                (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*glm::cos(camera.camera_angle))); // for the player to move towards
+            player.mv(vec3a(
+                (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*f32::sin(camera.camera_angle), 0.0, // use camera angle as direction
+                (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*f32::cos(camera.camera_angle))); // for the player to move towards
             player.mvhelper(); 
             
             // camera loop
             camera.player_pos=player.pos;
-            camera.camera_angle += (if glm::abs(player.vec.x) > 0.0001 || glm::abs(player.vec.z) > 0.0001 {1}
+            camera.camera_angle += (if f32::abs(player.vec.x) > 0.0001 || f32::abs(player.vec.z) > 0.0001 {1}
                 else {keystates[0]-keystates[2]}) as f32 * CAMERA_DELTA * (keystates[1]-keystates[3]) as f32;
             camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[5]) as f32;
             let (x, y) =  window.get_cursor_pos();
