@@ -1,6 +1,5 @@
 extern crate glam;
 use glam::*;
-use crate::num_traits::One;
 
 pub struct Player{
     pub mesh: crate::meshloader::Mesh,

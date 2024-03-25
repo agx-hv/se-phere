@@ -2,13 +2,10 @@ extern crate glfw;
 extern crate gl;
 extern crate glam;
 extern crate num_traits;
-use crate::num_traits::One;
 use glam::vec3a;
 use glam::f32::{Vec3A, Mat4};
-use glfw::{Action, Context, Key};
-use num_traits::ToPrimitive;
-use std::fmt::Debug;
-use std::{f32::consts::PI, process::CommandEnvs};
+use glfw::Context;
+use std::f32::consts::PI;
 pub mod shader;
 pub mod camera; 
 pub mod meshloader; 
@@ -18,7 +15,7 @@ use std::{thread, time};
 
 const DELTA_TIME: time::Duration = time::Duration::from_millis(16);
 
-const ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0);
+const _ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0); //Remove underscore if needed
 const MOVEMENT_DELTA: f32 = 0.001;
 const CAMERA_DELTA: f32 = 0.01;
 const SCR_W: f32 = 1920.0;
@@ -144,7 +141,7 @@ pub fn main() {
         while !window.should_close() {
 
             let t_mat = Mat4::from_translation(player.pos.into());
-            let (mut width,mut height) = window.get_size(); //get window width and height
+            let (width,height) = window.get_size(); //get window width and height
 
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
