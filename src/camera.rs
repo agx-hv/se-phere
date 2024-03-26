@@ -50,7 +50,6 @@ pub struct PlayerCamera {
     pub aspect: f32,
     pub near: f32,
     pub far: f32,
-    
 }
 
 impl PlayerCamera{

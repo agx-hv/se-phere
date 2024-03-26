@@ -7,6 +7,7 @@ use glam::f32::{Vec3A, Mat4};
 use glfw::Context;
 use std::f32::consts::PI;
 pub mod shader;
+use shader::ShaderProgram;
 pub mod camera; 
 pub mod meshloader; 
 use meshloader::Mesh;
@@ -28,14 +29,16 @@ const TILT_TRESHOLD_RATIO:f64=0.1; //how close to the edge before tilting
 pub fn main() {
     let mut player = Player::new(
         "assets/mesh/sephere.stl",
-        vec3a(0.1, 0.0, 0.3));
+        vec3a(0.1, 0.0, 0.3),
+        vec3a(0.8, 0.3, 0.2));
     let mut sphere_vertices = &player.mesh().vertices_flattened();
     let mut cube = Entity::new(
         "assets/mesh/cube.stl",
-        ORIGIN);
+        ORIGIN,
+        vec3a(0.2, 0.1, 0.8));
     let mut cube_vertices = &cube.mesh.vertices_flattened();
 
-    let mut camera = camera::PlayerCamera {
+    let mut player_camera = camera::PlayerCamera {
         player_pos: vec3a(0.0, 1.0, 3.0),
         camera_angle: 0.0, // 0 to 2pi
         tilt: 0.6, //0 to pi
@@ -63,98 +66,22 @@ pub fn main() {
         gl::Enable(gl::DEPTH_TEST);
         gl::ClearColor(0.2, 0.3, 0.3, 1.0);
 
-        let mut sphere_vao = 0u32;
-        let mut sphere_vbo = 0u32;
+        let lighting_program = ShaderProgram::new("src/shaders/lighting.vs", "src/shaders/lighting.fs");
 
-        let mut cube_vao = 0u32;
-        let mut cube_vbo = 0u32;
+        lighting_program.setVec3f(b"lightColor\0", 1.0, 1.0, 1.0);
+        lighting_program.setVec3f(b"lightPos\0", 0.8, 2.0, 1.5);
 
-        gl::GenVertexArrays(1, &mut sphere_vao);
-        assert_ne!(sphere_vao,0);
-        gl::BindVertexArray(sphere_vao);
-
-        gl::GenBuffers(1, &mut sphere_vbo);
-        assert_ne!(sphere_vbo,0);
-        gl::BindBuffer(gl::ARRAY_BUFFER, sphere_vbo);
-
-        gl::BufferData(gl::ARRAY_BUFFER, 
-            (sphere_vertices.len() * std::mem::size_of::<f32>()) as isize,
-            sphere_vertices.as_ptr().cast(),
-            gl::STATIC_DRAW);
-        gl::VertexAttribPointer(
-            0,
-            3,
-            gl::FLOAT,
-            gl::FALSE,
-            (6*std::mem::size_of::<f32>()).try_into().unwrap(),
-            0 as *const _,
-        );
-        gl::EnableVertexAttribArray(0);
-        gl::VertexAttribPointer(
-            1,
-            3,
-            gl::FLOAT,
-            gl::FALSE,
-            (6*std::mem::size_of::<f32>()).try_into().unwrap(),
-            (3*std::mem::size_of::<f32>()) as *const _,
-        );
-        gl::EnableVertexAttribArray(1);
-
-        gl::GenVertexArrays(1, &mut cube_vao);
-        assert_ne!(cube_vao,0);
-        gl::BindVertexArray(cube_vao);
-
-        gl::GenBuffers(1, &mut cube_vbo);
-        assert_ne!(cube_vbo,0);
-        gl::BindBuffer(gl::ARRAY_BUFFER, cube_vbo);
-
-        gl::BufferData(gl::ARRAY_BUFFER, 
-            (cube_vertices.len() * std::mem::size_of::<f32>()) as isize,
-            cube_vertices.as_ptr().cast(),
-            gl::STATIC_DRAW);
-        gl::VertexAttribPointer(
-            0,
-            3,
-            gl::FLOAT,
-            gl::FALSE,
-            (6*std::mem::size_of::<f32>()).try_into().unwrap(),
-            0 as *const _,
-        );
-        gl::EnableVertexAttribArray(0);
-        gl::VertexAttribPointer(
-            1,
-            3,
-            gl::FLOAT,
-            gl::FALSE,
-            (6*std::mem::size_of::<f32>()).try_into().unwrap(),
-            (3*std::mem::size_of::<f32>()) as *const _,
-        );
-        gl::EnableVertexAttribArray(1);
-
-        let lighting_program = shader::ShaderProgram::new("src/shaders/lighting.vs", "src/shaders/lighting.fs");
-
+        player.entity.gl_init();
+        cube.gl_init();
 
         while !window.should_close() {
 
-            let t_mat = Mat4::from_translation(player.pos().into());
-            let (width,height) = window.get_size(); //get window width and height
 
+            let (width,height) = window.get_size(); //get window width and height
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-            lighting_program.setMat4f(b"proj\0",&camera.proj_mat().to_cols_array()[0]);
-            lighting_program.setMat4f(b"view\0",&camera.view_mat().to_cols_array()[0]);
-            lighting_program.setMat4f(b"model\0",&t_mat.to_cols_array()[0]);
-            lighting_program.setVec3f(b"objectColor\0", 0.8, 0.3, 0.1);
-            lighting_program.setVec3f(b"lightColor\0", 1.0, 1.0, 1.0);
-            lighting_program.setVec3f(b"lightPos\0", 0.8, 2.0, 1.5);
-            gl::BindVertexArray(sphere_vao);
-            gl::DrawArrays(gl::TRIANGLES, 0, sphere_vertices.len() as i32);
-
-            lighting_program.setMat4f(b"model\0",&Mat4::IDENTITY.to_cols_array()[0]);
-            lighting_program.setVec3f(b"objectColor\0", 0.1, 0.3, 0.6);
-
-            gl::BindVertexArray(cube_vao);
-            gl::DrawArrays(gl::TRIANGLES, 0, cube_vertices.len() as i32);
+            player.entity.draw(&mut player_camera, &lighting_program);
+            cube.draw(&mut player_camera, &lighting_program);
 
             glfw.poll_events();
             window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
@@ -165,29 +92,29 @@ pub fn main() {
             
             // player loop
             player.mv(vec3a(
-                (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*f32::sin(camera.camera_angle), 0.0, // use camera angle as direction
-                (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*f32::cos(camera.camera_angle))); // for the player to move towards
+                (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*f32::sin(player_camera.camera_angle), 0.0, // use camera angle as direction
+                (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*f32::cos(player_camera.camera_angle))); // for the player to move towards
             player.mvhelper(); 
             
-            // camera loop
-            camera.player_pos=player.pos();
-            camera.camera_angle += (if f32::abs(player.vec.x) > 0.0001 || f32::abs(player.vec.z) > 0.0001 {1}
+            // player_camera loop
+            player_camera.player_pos=player.pos();
+            player_camera.camera_angle += (if f32::abs(player.vec.x) > 0.0001 || f32::abs(player.vec.z) > 0.0001 {1}
                 else {keystates[0]-keystates[2]}) as f32 * CAMERA_DELTA * (keystates[1]-keystates[3]) as f32;
-            camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[5]) as f32;
+            player_camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[5]) as f32;
             let (x, y) =  window.get_cursor_pos();
             //mouse control
             if x < width as f64 * PAN_TRESHOLD_RATIO{
-                camera.camera_angle += CAMERA_DELTA;
+                player_camera.camera_angle += CAMERA_DELTA;
             }
             else if x > width as f64 * (1.0-PAN_TRESHOLD_RATIO){
-                camera.camera_angle -= CAMERA_DELTA;
+                player_camera.camera_angle -= CAMERA_DELTA;
             }
 
             if y < height as f64 * TILT_TRESHOLD_RATIO{
-                camera.tilt -= CAMERA_DELTA;
+                player_camera.tilt -= CAMERA_DELTA;
             }
             else if y > height as f64 * (1.0-TILT_TRESHOLD_RATIO){
-                camera.tilt += CAMERA_DELTA;
+                player_camera.tilt += CAMERA_DELTA;
             }
 
 
