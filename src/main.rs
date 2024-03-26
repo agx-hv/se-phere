@@ -9,13 +9,15 @@ use std::f32::consts::PI;
 pub mod shader;
 pub mod camera; 
 pub mod meshloader; 
-pub mod player; 
+use meshloader::Mesh;
+pub mod entities; 
+use entities::*;
 pub mod keys;
 use std::{thread, time};
 
 const DELTA_TIME: time::Duration = time::Duration::from_millis(16);
 
-const _ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0); //Remove underscore if needed
+const ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0);
 const MOVEMENT_DELTA: f32 = 0.001;
 const CAMERA_DELTA: f32 = 0.01;
 const SCR_W: f32 = 1920.0;
@@ -24,22 +26,14 @@ const PAN_TRESHOLD_RATIO:f64=0.1; //how close to the edge before panning
 const TILT_TRESHOLD_RATIO:f64=0.1; //how close to the edge before tilting
 
 pub fn main() {
-    let mut sphere = meshloader::Mesh{vertices: Vec::new()};
-    sphere.load("assets/mesh/sephere.stl");
-    let mut player = player::Player{
-        mesh: sphere,
-        pos: vec3a(0.1, 0.0, 0.3),
-        vec: vec3a(0.0, 0.0, 0.0)};
-    let mut sphere_vertices = Vec::new();
-    for vertex in &player.mesh.vertices {
-        sphere_vertices.extend_from_slice(&mut vertex.to_array().as_slice());
-    }
-    let mut cube = meshloader::Mesh{vertices: Vec::new()};
-    cube.load("assets/mesh/cube.stl");
-    let mut cube_vertices = Vec::new();
-    for vertex in &cube.vertices {
-        cube_vertices.extend_from_slice(&mut vertex.to_array().as_slice());
-    }
+    let mut player = Player::new(
+        "assets/mesh/sephere.stl",
+        vec3a(0.1, 0.0, 0.3));
+    let mut sphere_vertices = &player.mesh().vertices_flattened();
+    let mut cube = Entity::new(
+        "assets/mesh/cube.stl",
+        ORIGIN);
+    let mut cube_vertices = &cube.mesh.vertices_flattened();
 
     let mut camera = camera::PlayerCamera {
         player_pos: vec3a(0.0, 1.0, 3.0),
@@ -67,11 +61,13 @@ pub fn main() {
 
     unsafe {
         gl::Enable(gl::DEPTH_TEST);
+        gl::ClearColor(0.2, 0.3, 0.3, 1.0);
+
         let mut sphere_vao = 0u32;
+        let mut sphere_vbo = 0u32;
+
         let mut cube_vao = 0u32;
         let mut cube_vbo = 0u32;
-        let mut sphere_vbo = 0u32;
-        gl::ClearColor(0.2, 0.3, 0.3, 1.0);
 
         gl::GenVertexArrays(1, &mut sphere_vao);
         assert_ne!(sphere_vao,0);
@@ -140,7 +136,7 @@ pub fn main() {
 
         while !window.should_close() {
 
-            let t_mat = Mat4::from_translation(player.pos.into());
+            let t_mat = Mat4::from_translation(player.pos().into());
             let (width,height) = window.get_size(); //get window width and height
 
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
@@ -174,7 +170,7 @@ pub fn main() {
             player.mvhelper(); 
             
             // camera loop
-            camera.player_pos=player.pos;
+            camera.player_pos=player.pos();
             camera.camera_angle += (if f32::abs(player.vec.x) > 0.0001 || f32::abs(player.vec.z) > 0.0001 {1}
                 else {keystates[0]-keystates[2]}) as f32 * CAMERA_DELTA * (keystates[1]-keystates[3]) as f32;
             camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[5]) as f32;
