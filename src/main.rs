@@ -29,11 +29,16 @@ pub fn main() {
     let mut player = Player::new(
         "assets/mesh/sephere.stl",
         vec3a(0.1, 0.0, 0.3),
-        vec3a(0.8, 0.3, 0.2));
+        vec3a(0.1, 0.5, 0.2));
     let mut cube = Entity::new(
         "assets/mesh/cube.stl",
         ORIGIN,
         vec3a(0.2, 0.1, 0.8));
+
+    let mut ground = Entity::new(
+        "assets/mesh/ground.stl",
+        ORIGIN,
+        vec3a(0.3, 0.1, 0.1));
 
     let mut player_camera = camera::PlayerCamera {
         player_pos: vec3a(0.0, 1.0, 3.0),
@@ -70,6 +75,7 @@ pub fn main() {
 
         player.entity.gl_init();
         cube.gl_init();
+        ground.gl_init();
 
         while !window.should_close() {
 
@@ -79,6 +85,7 @@ pub fn main() {
 
             player.entity.draw(&mut player_camera, &lighting_program);
             cube.draw(&mut player_camera, &lighting_program);
+            ground.draw(&mut player_camera, &lighting_program);
 
             glfw.poll_events();
             window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
