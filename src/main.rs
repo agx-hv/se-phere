@@ -26,19 +26,31 @@ const PAN_TRESHOLD_RATIO:f64=0.1; //how close to the edge before panning
 const TILT_TRESHOLD_RATIO:f64=0.1; //how close to the edge before tilting
 
 pub fn main() {
+    
+    let mut ground_vertex_markers = vec!();
+
     let mut player = Player::new(
-        "assets/mesh/sephere.stl",
-        vec3a(0.1, 0.0, 0.3),
+        "assets/mesh/small_sphere.stl",
+        vec3a(0.1, 0.1, 0.3),
         vec3a(0.1, 0.5, 0.2));
     let mut cube = Entity::new(
         "assets/mesh/cube.stl",
         ORIGIN,
         vec3a(0.2, 0.1, 0.8));
-
     let mut ground = Entity::new(
-        "assets/mesh/ground.stl",
+        "assets/mesh/ground_lowpoly.stl",
         ORIGIN,
-        vec3a(0.3, 0.1, 0.1));
+        vec3a(0.4, 0.2, 0.1));
+
+    for vertex in &ground.mesh.vertices {
+        if vertex[1] == 0.0 {
+            let mut marker = Entity::new(
+                "assets/mesh/cube.stl",
+                *vertex,
+                vec3a(0.8, 0.2, 0.8));
+            ground_vertex_markers.push(marker);
+        }
+    }
 
     let mut player_camera = camera::PlayerCamera {
         player_pos: vec3a(0.0, 1.0, 3.0),
@@ -70,15 +82,17 @@ pub fn main() {
 
         let lighting_program = ShaderProgram::new("src/shaders/lighting.vs", "src/shaders/lighting.fs");
 
-        lighting_program.setVec3f(b"lightColor\0", 1.0, 1.0, 1.0);
-        lighting_program.setVec3f(b"lightPos\0", 0.8, 2.0, 1.5);
+        lighting_program.setVec3f(b"lightColor\0", 2.0, 2.0, 2.0);
+        lighting_program.setVec3f(b"lightPos\0", 10.0, 25.0, 10.0);
 
         player.entity.gl_init();
         cube.gl_init();
         ground.gl_init();
+        for mut marker in &mut ground_vertex_markers {
+            marker.gl_init();
+        }
 
         while !window.should_close() {
-
 
             let (width,height) = window.get_size(); //get window width and height
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
@@ -87,6 +101,9 @@ pub fn main() {
             cube.draw(&mut player_camera, &lighting_program);
             ground.draw(&mut player_camera, &lighting_program);
 
+            for marker in &mut ground_vertex_markers {
+                marker.draw(&mut player_camera, &lighting_program);
+            }
             glfw.poll_events();
             window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
             for (_, event) in glfw::flush_messages(&events) {
