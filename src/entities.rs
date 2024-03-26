@@ -2,7 +2,7 @@ extern crate glam;
 extern crate gl;
 use glam::*;
 use crate::meshloader::Mesh;
-use crate::camera::{Camera, PlayerCamera};
+use crate::camera::PlayerCamera;
 use crate::shader::ShaderProgram;
 
 pub struct Player {

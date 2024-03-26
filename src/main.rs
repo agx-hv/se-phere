@@ -3,14 +3,13 @@ extern crate gl;
 extern crate glam;
 extern crate num_traits;
 use glam::vec3a;
-use glam::f32::{Vec3A, Mat4};
+use glam::f32::Vec3A;
 use glfw::Context;
 use std::f32::consts::PI;
 pub mod shader;
 use shader::ShaderProgram;
 pub mod camera; 
 pub mod meshloader; 
-use meshloader::Mesh;
 pub mod entities; 
 use entities::*;
 pub mod keys;
@@ -31,12 +30,10 @@ pub fn main() {
         "assets/mesh/sephere.stl",
         vec3a(0.1, 0.0, 0.3),
         vec3a(0.8, 0.3, 0.2));
-    let mut sphere_vertices = &player.mesh().vertices_flattened();
     let mut cube = Entity::new(
         "assets/mesh/cube.stl",
         ORIGIN,
         vec3a(0.2, 0.1, 0.8));
-    let mut cube_vertices = &cube.mesh.vertices_flattened();
 
     let mut player_camera = camera::PlayerCamera {
         player_pos: vec3a(0.0, 1.0, 3.0),

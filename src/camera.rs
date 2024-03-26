@@ -3,44 +3,6 @@ use glam::vec3a;
 use glam::f32::{Mat4, Vec3A};
 use std::f32::consts::PI;
 
-pub struct Camera {
-    pub eye: Vec3A,
-    pub center: Vec3A,
-    pub up: Vec3A,
-    pub fov: f32,
-    pub aspect: f32,
-    pub near: f32,
-    pub far: f32,
-
-    pub vec: Vec3A,
-}
-
-impl Camera {
-    pub fn view_mat(&mut self) -> Mat4 {
-        Mat4::look_at_rh(self.eye.into(), self.center.into(), self.up.into())
-    }
-    pub fn proj_mat(&mut self) -> Mat4 {
-        Mat4::perspective_rh(self.fov.into(), self.aspect.into(), self.near.into(), self.far.into())
-    }
-
-    pub fn mvhelper(&mut self, p_pos: Vec3A, p_vec: Vec3A) {
-        self.vec += p_vec;
-
-        const CAM_DELTA: f32 = 0.01;
-        self.eye.x += self.vec.x * CAM_DELTA;
-        self.center.x += self.center.x * CAM_DELTA;
-        self.eye.y += self.vec.y * CAM_DELTA;
-        self.eye.z += self.vec.z * CAM_DELTA;
-        self.center.z += self.center.z * CAM_DELTA;
-
-        self.vec.x *= 1.0 - CAM_DELTA;
-        self.vec.y *= 1.0 - CAM_DELTA;
-        self.vec.z *= 1.0 - CAM_DELTA;
-        
-    }
-}
-
-
 pub struct PlayerCamera {
     pub player_pos: Vec3A, //players coords
     pub camera_angle: f32, // 0 to 2pi, 0 is behind player
