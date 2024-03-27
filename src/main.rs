@@ -21,12 +21,12 @@ const DELTA_TIME: time::Duration = time::Duration::from_millis(16);
 const ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0);
 const MOVEMENT_DELTA: f32 = 0.001;
 const CAMERA_DELTA: f32 = 0.01;
-const SCR_W: f32 = 1920.0;
-const SCR_H: f32 = 1080.0;
 const PAN_TRESHOLD_RATIO:f64=0.1; //how close to the edge before panning
 const TILT_TRESHOLD_RATIO:f64=0.1; //how close to the edge before tilting
 
 pub fn main() {
+    let mut scr_w = 1920i32;
+    let mut scr_h = 1080i32;
     
     let mut ground_vertex_markers = vec!();
 
@@ -45,7 +45,7 @@ pub fn main() {
 
     for vertex in &ground.mesh.vertices {
         if vertex[1] == 0.0 {
-            let mut marker = Entity::new(
+            let marker = Entity::new(
                 "assets/mesh/cube.stl",
                 *vertex,
                 vec3a(0.8, 0.2, 0.8));
@@ -64,7 +64,7 @@ pub fn main() {
         tilt: 0.6, //0 to pi
         radius: 2.0,
         fov: PI/3.0,
-        aspect: SCR_W/SCR_H,
+        aspect: (scr_w as f32/scr_h as f32),
         near: 0.1,
         far: 100.0};
 
@@ -72,8 +72,10 @@ pub fn main() {
     let mut keystates = [0;16];
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
 
-    let (mut window, events) = glfw.create_window(SCR_W as u32, SCR_H as u32, "Se-Phere!", glfw::WindowMode::Windowed)
-        .expect("Failed to create GLFW window.");
+    let (mut window, events) = glfw.with_primary_monitor(|glfw, m| {
+        glfw.create_window(1920, 1080, "Se-phere!",
+            m.map_or(glfw::WindowMode::Windowed, |m| glfw::WindowMode::FullScreen(m)))
+    }).expect("Failed to create GLFW window");
 
     window.set_key_polling(true);
     window.set_mouse_button_polling(true);
@@ -95,11 +97,16 @@ pub fn main() {
         cube.gl_init();
         ground.gl_init();
         rt_marker.gl_init();
-        for mut marker in &mut ground_vertex_markers {
+        for marker in &mut ground_vertex_markers {
             marker.gl_init();
         }
 
         while !window.should_close() {
+
+            (scr_w, scr_h) = window.get_size();
+            player_camera.aspect = scr_w as f32 / scr_h as f32;
+            gl::Viewport(0,0,scr_w,scr_h);
+
             // ground mesh selection
             //mouse tracking
             let (x, y) = window.get_cursor_pos();
@@ -108,8 +115,8 @@ pub fn main() {
                 let p = player_camera.proj_mat();
                 let v = player_camera.view_mat();
                 let pvi = (p*v).inverse();
-                let ndc_x = (x as f32/SCR_W  - 0.5) * 2.0;
-                let ndc_y = (y as f32/SCR_H - 0.5) * -2.0;
+                let ndc_x = (x as f32/scr_w as f32 - 0.5) * 2.0;
+                let ndc_y = (y as f32/scr_h as f32 - 0.5) * -2.0;
                 let rs = vec4(
                     ndc_x,
                     ndc_y,
@@ -131,7 +138,7 @@ pub fn main() {
                 let mut i = 0f32;
                 let mut p = eye;
 
-                while num_traits::abs(p[1]) > 0.01 {
+                while num_traits::abs(p[1]) > 0.01 && i <= 10000.0 {
                     p += (delta as f32)*i*raydir;
                     i += 1.0;
                 }
@@ -139,7 +146,6 @@ pub fn main() {
                 
             }
 
-            let (width,height) = window.get_size(); //get window width and height
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
             player.entity.draw(&mut player_camera, &lighting_program);
@@ -155,7 +161,7 @@ pub fn main() {
             glfw.poll_events();
             window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
             for (_, event) in glfw::flush_messages(&events) {
-                handle_window_event(&mut window, event, &mut keystates);
+                handle_window_event(&mut glfw, &mut window, event, &mut keystates);
             }
             window.swap_buffers();
             
@@ -200,9 +206,24 @@ pub fn main() {
 }
 
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent,
-    keystates:&mut [i8; 16]) {
+fn handle_window_event(glfw: &mut glfw::Glfw, window: &mut glfw::Window, event: glfw::WindowEvent, keystates:&mut [i8; 16]) {
     match event {
+        glfw::WindowEvent::Key(glfw::Key::F, _, glfw::Action::Press, _) => {
+            let mut fullscreen = false;
+            window.with_window_mode(|mode| {
+                match mode {
+                    glfw::WindowMode::Windowed => fullscreen = false,
+                    glfw::WindowMode::FullScreen(_) => fullscreen = true,
+                }
+            });
+            if fullscreen {
+                window.set_monitor(glfw::WindowMode::Windowed,0,0,800,600,Some(60));
+            } else {
+                glfw.with_primary_monitor(|_,m| {
+                    window.set_monitor(glfw::WindowMode::FullScreen(m.expect("Failed to set Fullscreen")),0,0,1920,1080,Some(60));
+                });
+            }
+        }
         glfw::WindowEvent::Key(key,_,action,modifier) =>{
             keys::handle_key_event(window, key, action,modifier, keystates);}
 

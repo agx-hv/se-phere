@@ -16,7 +16,7 @@ pub fn handle_key_event(window: &mut glfw::Window, key: Key, action: Action,modi
         _ => 999 // everything else
     };
     if index != 999 {
-        keystates[index] = if action == Action::Release { 0 } else { 1};
+        keystates[index] = if action == Action::Release { 0 } else { 1 };
     }
 }
 pub fn handle_mouse_button(mouse_button: MouseButton, action: Action,modifier:Modifiers, keystates: &mut [i8; 16]) {
@@ -26,7 +26,7 @@ pub fn handle_mouse_button(mouse_button: MouseButton, action: Action,modifier:Mo
         _ => 999 //everything else
     };
     if index != 999 {
-        keystates[index] = if action == Action::Release { 0 } else { 1};
+        keystates[index] = if action == Action::Release { 0 } else { 1 };
     }
 }
 
