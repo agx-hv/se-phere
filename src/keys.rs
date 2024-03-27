@@ -1,4 +1,3 @@
-
 extern crate glfw;
 use glfw::{Action, Key, Modifiers, MouseButton};
 

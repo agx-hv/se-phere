@@ -100,4 +100,7 @@ impl Entity {
             gl::BindVertexArray(self.vao);
             gl::DrawArrays(gl::TRIANGLES, 0, self.mesh.vertices.len() as i32);
     }
+    pub fn mutate(&mut self, closest: Vec3A, direction: Vec3A) {
+        let m = &mut self.mesh;
+    }
 }
