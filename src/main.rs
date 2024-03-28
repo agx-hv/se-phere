@@ -2,9 +2,8 @@ extern crate glfw;
 extern crate gl;
 extern crate glam;
 extern crate num_traits;
-use glam::{dvec2, vec3a, vec4};
-use glam::f32::{Vec2, Vec3A, Vec4};
-use glam::f64::{DVec2};
+use glam::{vec3a, vec4};
+use glam::f32:: Vec3A;
 use glfw::Context;
 use std::f32::consts::PI;
 pub mod shader;
@@ -112,7 +111,7 @@ pub fn main() {
             //mouse tracking
             let (x, y) = window.get_cursor_pos();
 
-            if keystates[10] == 0 {
+            if keystates[10] == 0 || keystates [11] ==0 {
                 let p = player_camera.proj_mat();
                 let v = player_camera.view_mat();
                 let pvi = (p*v).inverse();
@@ -187,23 +186,21 @@ pub fn main() {
             player_camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[5]) as f32;
 
 
-            /*
-            //mouse control
+            // //mouse control
 
-            if x < width as f64 * PAN_TRESHOLD_RATIO{
+            if x < scr_w as f64 * PAN_TRESHOLD_RATIO{
                 player_camera.camera_angle += CAMERA_DELTA;
             }
-            else if x > width as f64 * (1.0-PAN_TRESHOLD_RATIO){
+            else if x > scr_w as f64 * (1.0-PAN_TRESHOLD_RATIO){
                 player_camera.camera_angle -= CAMERA_DELTA;
             }
 
-            if y < height as f64 * TILT_TRESHOLD_RATIO{
+            if y < scr_h as f64 * TILT_TRESHOLD_RATIO{
                 player_camera.tilt -= CAMERA_DELTA;
             }
-            else if y > height as f64 * (1.0-TILT_TRESHOLD_RATIO){
+            else if y > scr_h as f64 * (1.0-TILT_TRESHOLD_RATIO){
                 player_camera.tilt += CAMERA_DELTA;
             }
-            */
 
 
             thread::sleep(DELTA_TIME);
