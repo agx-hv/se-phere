@@ -24,7 +24,7 @@ impl Player {
         Player {
             vec: vec3a(0.0, 0.0, 0.0),
             entity: e,
-            camera: camera,
+            camera,
         }
     }
     pub fn mv(&mut self, t_vec: Vec3A) {
