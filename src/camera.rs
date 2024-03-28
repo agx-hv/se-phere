@@ -15,6 +15,19 @@ pub struct PlayerCamera {
 }
 
 impl PlayerCamera{
+    pub fn new(player_pos:Vec3A,aspect:f32)-> Self {
+        PlayerCamera{
+            player_pos: player_pos,
+            camera_angle: 0.0,
+            tilt: 0.6,
+            radius: 2.0,
+            fov: PI/3.0,
+            aspect : aspect,
+            near: 0.01,
+            far: 100.0,
+        }
+    }
+
     pub fn view_mat(&mut self) -> Mat4 {
         if self.camera_angle<0.0{
             self.camera_angle += 2.0*PI; //alows for camera to spin horinzontaly constantly around player while preventing int overflow
