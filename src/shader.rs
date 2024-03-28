@@ -83,7 +83,7 @@ impl ShaderProgram {
             program: program
         }
     }
-    pub unsafe fn setMat4f(&self, loc: &[u8], value: *const GLfloat) {
+    pub unsafe fn set_mat4f(&self, loc: &[u8], value: *const GLfloat) {
         let loc = gl::GetUniformLocation(self.program, loc.as_ptr() as *const i8);
         gl::UniformMatrix4fv(
             loc,
@@ -92,7 +92,7 @@ impl ShaderProgram {
             value,
         );
     }
-    pub unsafe fn setVec3f(&self, loc: &[u8], v0: GLfloat, v1: GLfloat, v2: GLfloat) {
+    pub unsafe fn set_vec3f(&self, loc: &[u8], v0: GLfloat, v1: GLfloat, v2: GLfloat) {
         let loc = gl::GetUniformLocation(self.program, loc.as_ptr() as *const i8);
         gl::Uniform3f(
             loc,

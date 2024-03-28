@@ -30,6 +30,7 @@ pub fn main() {
     
     let mut ground_vertex_markers = vec!();
 
+    // initializing entities as Entity
     let mut player = Player::new(
         "assets/mesh/small_sphere.stl",
         vec3a(0.1, 0.1, 0.3),
@@ -90,8 +91,8 @@ pub fn main() {
 
         let lighting_program = ShaderProgram::new("src/shaders/lighting.vs", "src/shaders/lighting.fs");
 
-        lighting_program.setVec3f(b"lightColor\0", 2.0, 2.0, 2.0);
-        lighting_program.setVec3f(b"lightPos\0", 10.0, 25.0, 10.0);
+        lighting_program.set_vec3f(b"lightColor\0", 2.0, 2.0, 2.0);
+        lighting_program.set_vec3f(b"lightPos\0", 10.0, 25.0, 10.0);
 
         player.entity.gl_init();
         cube.gl_init();
@@ -148,6 +149,14 @@ pub fn main() {
 
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
+            for marker in &mut ground_vertex_markers {
+                if player.entity.detect_col(&marker){ 
+                    marker.set_color(vec3a(0.1, 0.5, 0.2));
+                } else {
+                    marker.set_color(vec3a(0.8, 0.2, 0.8));
+                }
+            }
+
             player.entity.draw(&mut player_camera, &lighting_program);
             //cube.draw(&mut player_camera, &lighting_program);
             ground.draw(&mut player_camera, &lighting_program);
@@ -155,8 +164,8 @@ pub fn main() {
             for marker in &mut ground_vertex_markers {
                 marker.draw(&mut player_camera, &lighting_program);
             }
-
             rt_marker.draw(&mut player_camera, &lighting_program);
+
 
             glfw.poll_events();
             window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);

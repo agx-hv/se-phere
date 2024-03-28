@@ -55,6 +55,9 @@ impl Entity {
     pub fn mv(&mut self, t_vec: Vec3A) {
         self.pos += t_vec;
     }
+    pub fn set_color(&mut self, color: Vec3A) {
+        self.color = color;
+    }
     pub unsafe fn gl_init(&mut self) {
         let mut vbo = 0u32;
 
@@ -91,16 +94,58 @@ impl Entity {
         );
         gl::EnableVertexAttribArray(1);
     }
+
     pub unsafe fn draw(&self, camera: &mut PlayerCamera, lighting_program: &ShaderProgram) {
             let t_mat = Mat4::from_translation(self.pos.into());
-            lighting_program.setMat4f(b"proj\0",&camera.proj_mat().to_cols_array()[0]);
-            lighting_program.setMat4f(b"view\0",&camera.view_mat().to_cols_array()[0]);
-            lighting_program.setMat4f(b"model\0",&t_mat.to_cols_array()[0]);
-            lighting_program.setVec3f(b"objectColor\0", self.color[0], self.color[1], self.color[2]);
+            lighting_program.set_mat4f(b"proj\0",&camera.proj_mat().to_cols_array()[0]);
+            lighting_program.set_mat4f(b"view\0",&camera.view_mat().to_cols_array()[0]);
+            lighting_program.set_mat4f(b"model\0",&t_mat.to_cols_array()[0]);
+            lighting_program.set_vec3f(b"objectColor\0", self.color[0], self.color[1], self.color[2]);
             gl::BindVertexArray(self.vao);
             gl::DrawArrays(gl::TRIANGLES, 0, self.mesh.vertices.len() as i32);
     }
     pub fn mutate(&mut self, closest: Vec3A, direction: Vec3A) {
         let m = &mut self.mesh;
     }
+
+    pub fn detect_col(&self, other: &Entity) -> bool {
+        // Perform collision detection logic here
+
+        // if self.pos.distance(other.pos) < 0.5 { // this works for smooth detection - only center entity
+        //     for vert in &other.mesh.vertices {
+        //         if self.pos.distance(*vert) < 0.1 {
+        //             return true; // Collision detected
+        //         }
+        //     }
+        // }false
+
+        // if self.pos.distance(other.pos) < 0.25{ // this works for one on one detection - laggy
+        //     for vertex1 in &self.mesh.vertices {
+        //         for vertex2 in &other.mesh.vertices {
+        //             if vertex1.x == vertex2.x && vertex1.y == vertex2.y && vertex1.z == vertex2.z {
+        //                 return true; // Collision detected
+        //             }
+        //         }
+        //     }
+        // }false
+
+        if self.pos.distance(other.pos) < 0.5{ // this works for one on one detection - laggy
+            for vertex2 in &other.mesh.vertices {
+            if f32::abs(self.pos.x - vertex2.x)<0.2 &&
+            f32::abs(self.pos.z - vertex2.z)<0.2{
+                    return true; // Collision detected
+                }
+            }
+        }false
+
+        // let collision_threshold = 0.2; // this works for smooth detection - only center entity - lights everything
+        // for vert in &other.mesh.vertices {
+        //     let distance = self.pos.distance(*vert);
+        //     if distance < collision_threshold {
+        //         return true;
+        //     }
+        // }false
+    }
+
+
 }
