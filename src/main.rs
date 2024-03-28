@@ -152,6 +152,7 @@ pub fn main() {
                     marker.set_color(vec3a(0.8, 0.2, 0.8));
                 }
                 marker.draw(&mut player.camera, &lighting_program);
+                player.collide(marker);
             }
             cube.draw(&mut player.camera, &lighting_program);
             //rt_marker.draw(&mut player.camera, &lighting_program);

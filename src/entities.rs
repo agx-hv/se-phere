@@ -42,6 +42,13 @@ impl Player {
     pub fn mesh(&self) -> &Mesh {
         &self.entity.mesh
     }
+    pub fn collide(&mut self, other: &Entity) {
+        let collided = self.entity.detect_col(other);
+        if collided {
+            self.vec = vec3a(0.0,0.0,0.0);
+        }
+
+    }
 }
 
 impl Entity {
