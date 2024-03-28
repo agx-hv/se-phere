@@ -35,6 +35,8 @@ impl Player {
 
         const VEC_DELTA: f32 = 0.95;
         self.vec *= VEC_DELTA;
+
+        if self.entity.pos.y > 0.15 {self.vec += vec3a(0.0, -0.01, 0.0)} // gravity
     }
     pub fn pos(&self) -> Vec3A {
         self.entity.pos
@@ -42,12 +44,12 @@ impl Player {
     pub fn mesh(&self) -> &Mesh {
         &self.entity.mesh
     }
-    pub fn collide(&mut self, other: &Entity) {
+    pub fn collide(&mut self, other: &Entity) { //TODO: actually why do we have 'two' col detection fns.. can this vec not be run w col_det
+                                                //      or in fact if it's bcs self.vec doesn't exist, then what if all entities have vec
         let collided = self.entity.detect_col(other);
-        if collided {
-            self.vec = vec3a(0.0,0.0,0.0);
+        if collided.0 {
+            self.vec = vec3a(collided.1.x,collided.1.y,collided.1.z)*0.01; // bounce from collision
         }
-
     }
 }
 
@@ -56,9 +58,9 @@ impl Entity {
         let m = Mesh::new(stl_path);
         Entity {
             mesh: m,
-            pos: pos,
+            pos,
             vao: 0,
-            color: color,
+            color,
         }
     }
     pub fn mv(&mut self, t_vec: Vec3A) {
@@ -117,45 +119,25 @@ impl Entity {
         let m = &mut self.mesh;
     }
 
-    pub fn detect_col(&self, other: &Entity) -> bool {
-        // Perform collision detection logic here
-
-        // if self.pos.distance(other.pos) < 0.5 { // this works for smooth detection - only center entity
-        //     for vert in &other.mesh.vertices {
-        //         if self.pos.distance(*vert) < 0.1 {
-        //             return true; // Collision detected
-        //         }
-        //     }
-        // }false
-
-        // if self.pos.distance(other.pos) < 0.25{ // this works for one on one detection - laggy
-        //     for vertex1 in &self.mesh.vertices {
-        //         for vertex2 in &other.mesh.vertices {
-        //             if vertex1.x == vertex2.x && vertex1.y == vertex2.y && vertex1.z == vertex2.z {
-        //                 return true; // Collision detected
-        //             }
-        //         }
-        //     }
-        // }false
-        
-
+    pub fn detect_col(&self, other: &Entity) -> (bool, Vec3A) {
+        // Performing collision detection logic
         for face in &other.mesh.faces {
             let a = other.mesh.vertices[face.vertices[0]] + other.pos;
             let b = other.mesh.vertices[face.vertices[1]] + other.pos;
             let c = other.mesh.vertices[face.vertices[2]] + other.pos;
             let face_normal = vec3a(face.normal[0],face.normal[1],face.normal[2]);
-            let face_mid = (a+b+c)/3.0;
+            let face_mid = (a+b+c)/3.0; // get centroid of face vertices' points
 
             if face_mid.distance(self.pos) < 0.3 {
                 let condition1 = face_mid.distance(self.pos) < face_mid.distance(a);
                 let condition2 = face_mid.distance(self.pos) < face_mid.distance(b);
                 let condition3 = face_mid.distance(self.pos) < face_mid.distance(c);
-                let condition = condition1 || condition2 || condition3;
-                if (self.pos-a).project_onto(face_normal).length_squared() < 0.01 && condition { return true }
+                let condition = condition1 || condition2 || condition3; // check if player is close enough to face
+                if (self.pos-a).project_onto(face_normal).length_squared() < 0.01 && condition { return (true,face_normal) }
             }
         }
 
-        false
+        (false,vec3a(0.0,0.0,0.0))
 
         // if self.pos.distance(other.pos) < 0.5{ // this works for one on one detection - not rly laggy
         //     for vertex2 in &other.mesh.vertices {

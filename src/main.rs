@@ -32,7 +32,7 @@ pub fn main() {
     // initializing entities as Entity
     let mut player = Player::new(
         "assets/mesh/small_sphere.stl",
-        vec3a(0.1, 0.1, 0.3),
+        vec3a(0.1, 1.0, 0.3),
         vec3a(0.1, 0.5, 0.2),
         camera::PlayerCamera::new(vec3a(0.0, 1.0, 3.0),scr_w as f32/scr_h as f32),);
     let mut cube = Entity::new(
@@ -40,7 +40,7 @@ pub fn main() {
         ORIGIN,
         vec3a(0.2, 0.1, 0.8));
     let mut ground = Entity::new(
-        "assets/mesh/ground_lowpoly.stl",
+        "assets/mesh/ground.stl",
         ORIGIN,
         vec3a(0.4, 0.2, 0.1));
 
@@ -90,7 +90,7 @@ pub fn main() {
         ground.gl_init();
         rt_marker.gl_init();
         for marker in &mut ground_vertex_markers {
-            marker.gl_init();
+            // marker.gl_init();
         }
 
         while !window.should_close() {
@@ -142,20 +142,24 @@ pub fn main() {
 
 
             player.entity.draw(&mut player.camera, &lighting_program);
+
+            if player.entity.detect_col(&ground).0 {player.collide(&ground)};
             ground.draw(&mut player.camera, &lighting_program);
 
             for marker in &mut ground_vertex_markers {
-                if player.entity.detect_col(&marker){ 
-                    marker.set_color(vec3a(0.8, 0.1, 0.1));
-                } else if rt_marker.detect_col(&marker) {
-                    marker.set_color(vec3a(0.1, 0.8, 0.1));
+                if player.entity.detect_col(&marker).0{ 
+                    // marker.set_color(vec3a(0.8, 0.1, 0.1));
+                } else if rt_marker.detect_col(&marker).0 {
+                    // marker.set_color(vec3a(0.1, 0.8, 0.1));
                 } else {
-                    marker.set_color(vec3a(0.8, 0.2, 0.8));
+                    // marker.set_color(vec3a(0.8, 0.2, 0.8));
                 }
-                marker.draw(&mut player.camera, &lighting_program);
-                player.collide(marker);
+                // marker.draw(&mut player.camera, &lighting_program);
+                // player.collide(marker);
             }
+
             cube.draw(&mut player.camera, &lighting_program);
+
             //rt_marker.draw(&mut player.camera, &lighting_program);
 
 
@@ -180,7 +184,6 @@ pub fn main() {
 
 
             // //mouse control
-
             if x < scr_w as f64 * PAN_TRESHOLD_RATIO{
                 player.camera.camera_angle += CAMERA_DELTA;
             }
