@@ -129,14 +129,28 @@ impl Entity {
         //     }
         // }false
 
-        if self.pos.distance(other.pos) < 0.5{ // this works for one on one detection - laggy
-            for vertex2 in &other.mesh.vertices {
-            if f32::abs(self.pos.x - vertex2.x)<0.2 &&
-            f32::abs(self.pos.z - vertex2.z)<0.2{
-                    return true; // Collision detected
-                }
+        for face in &other.mesh.faces {
+            let a = other.mesh.vertices[face.vertices[0]];
+            let b = other.mesh.vertices[face.vertices[1]];
+            let c = other.mesh.vertices[face.vertices[2]];
+            let face_normal = vec3a(face.normal[0],face.normal[1],face.normal[2]);
+            let face_mid = (a+b+c)/3.0;
+
+            if face_mid.distance(self.pos) < 0.3{
+                if a.project_onto(face_normal).length_squared() < 0.01 || b.project_onto(face_normal).length_squared() < 0.01 ||
+                c.project_onto(face_normal).length_squared() < 0.01 { return true }
             }
+                
         }false
+
+        // if self.pos.distance(other.pos) < 0.5{ // this works for one on one detection - not rly laggy
+        //     for vertex2 in &other.mesh.vertices {
+        //     if f32::abs(self.pos.x - vertex2.x)<0.2 &&
+        //     f32::abs(self.pos.z - vertex2.z)<0.2{
+        //             return true; // Collision detected
+        //         }
+        //     }
+        // }false
 
         // let collision_threshold = 0.2; // this works for smooth detection - only center entity - lights everything
         // for vert in &other.mesh.vertices {

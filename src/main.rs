@@ -50,6 +50,7 @@ pub fn main() {
                 "assets/mesh/cube.stl",
                 *vertex,
                 vec3a(0.8, 0.2, 0.8));
+            
             ground_vertex_markers.push(marker);
         }
     }
