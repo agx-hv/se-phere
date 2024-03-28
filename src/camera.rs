@@ -29,6 +29,9 @@ impl PlayerCamera{
     }
 
     pub fn view_mat(&mut self) -> Mat4 {
+        if self.radius<0.1{
+            self.radius = 0.1
+        }
         if self.camera_angle<0.0{
             self.camera_angle += 2.0*PI; //alows for camera to spin horinzontaly constantly around player while preventing int overflow
         }

@@ -21,6 +21,7 @@ const MOVEMENT_DELTA: f32 = 0.001;
 const CAMERA_DELTA: f32 = 0.01;
 const PAN_TRESHOLD_RATIO:f64=0.1; //how close to the edge before panning
 const TILT_TRESHOLD_RATIO:f64=0.1; //how close to the edge before tilting
+const ZOOM_DELTA:f32 = 0.1;
 
 pub fn main() {
     let mut scr_w = 1920i32;
@@ -161,7 +162,7 @@ pub fn main() {
             glfw.poll_events();
             window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
             for (_, event) in glfw::flush_messages(&events) {
-                handle_window_event(&mut glfw, &mut window, event, &mut keystates);
+                handle_window_event(&mut glfw, &mut window, event, &mut player,&mut keystates);
             }
             window.swap_buffers();
             
@@ -204,7 +205,7 @@ pub fn main() {
 }
 
 
-fn handle_window_event(glfw: &mut glfw::Glfw, window: &mut glfw::Window, event: glfw::WindowEvent, keystates:&mut [i8; 16]) {
+fn handle_window_event(glfw: &mut glfw::Glfw, window: &mut glfw::Window, event: glfw::WindowEvent,player: &mut Player, keystates:&mut [i8; 16]) {
     match event {
         glfw::WindowEvent::Key(glfw::Key::F, _, glfw::Action::Press, _) => {
             let mut fullscreen = false;
@@ -227,6 +228,10 @@ fn handle_window_event(glfw: &mut glfw::Glfw, window: &mut glfw::Window, event: 
 
         glfw::WindowEvent::MouseButton(mouse_button,action,modifier) =>{
             keys::handle_mouse_button(mouse_button,action,modifier,keystates);}
+
+        glfw::WindowEvent::Scroll(x,y )=>{
+                player.camera.radius += ZOOM_DELTA*y as f32;}
+
         _=>{}
     } 
 

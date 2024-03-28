@@ -1,5 +1,6 @@
 extern crate glfw;
 use glfw::{Action, Key, Modifiers, MouseButton};
+use num_traits::abs;
 
 pub fn handle_key_event(window: &mut glfw::Window, key: Key, action: Action,modifier:Modifiers, keystates: &mut [i8; 16]) {
     let index = match key { //modular mapping system
@@ -29,4 +30,3 @@ pub fn handle_mouse_button(mouse_button: MouseButton, action: Action,modifier:Mo
         keystates[index] = if action == Action::Release { 0 } else { 1 };
     }
 }
-
