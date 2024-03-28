@@ -2,11 +2,9 @@ extern crate glfw;
 extern crate gl;
 extern crate glam;
 extern crate num_traits;
-use glam::{dvec2, vec3a, vec4};
-use glam::f32::{Vec2, Vec3A, Vec4};
-use glam::f64::{DVec2};
+use glam::{vec3a, vec4};
+use glam::f32:: Vec3A;
 use glfw::Context;
-use std::f32::consts::PI;
 pub mod shader;
 use shader::ShaderProgram;
 pub mod camera; 
@@ -34,7 +32,8 @@ pub fn main() {
     let mut player = Player::new(
         "assets/mesh/small_sphere.stl",
         vec3a(0.1, 0.1, 0.3),
-        vec3a(0.1, 0.5, 0.2));
+        vec3a(0.1, 0.5, 0.2),
+        camera::PlayerCamera::new(vec3a(0.0, 1.0, 3.0),scr_w as f32/scr_h as f32),);
     let mut cube = Entity::new(
         "assets/mesh/cube.stl",
         ORIGIN,
@@ -59,16 +58,6 @@ pub fn main() {
         "assets/mesh/cube.stl",
         vec3a(0.0,0.3,0.0),
         vec3a(0.1, 0.1, 0.1));
-
-    let mut player_camera = camera::PlayerCamera {
-        player_pos: vec3a(0.0, 1.0, 3.0),
-        camera_angle: 0.0, // 0 to 2pi
-        tilt: 0.6, //0 to pi
-        radius: 2.0,
-        fov: PI/3.0,
-        aspect: (scr_w as f32/scr_h as f32),
-        near: 0.1,
-        far: 100.0};
 
     //keys
     let mut keystates = [0;16];
@@ -106,16 +95,16 @@ pub fn main() {
         while !window.should_close() {
 
             (scr_w, scr_h) = window.get_size();
-            player_camera.aspect = scr_w as f32 / scr_h as f32;
+            player.camera.aspect = scr_w as f32 / scr_h as f32;
             gl::Viewport(0,0,scr_w,scr_h);
 
             // ground mesh selection
             //mouse tracking
             let (x, y) = window.get_cursor_pos();
 
-            if keystates[10] == 0 {
-                let p = player_camera.proj_mat();
-                let v = player_camera.view_mat();
+            if keystates[10] == 0 || keystates [11] ==0 {
+                let p = player.camera.proj_mat();
+                let v = player.camera.view_mat();
                 let pvi = (p*v).inverse();
                 let ndc_x = (x as f32/scr_w as f32 - 0.5) * 2.0;
                 let ndc_y = (y as f32/scr_h as f32 - 0.5) * -2.0;
@@ -134,7 +123,7 @@ pub fn main() {
                 let mut rew = pvi*re;
                 rew /= rew[3];
                 let raydir: Vec3A = (rew-rsw).normalize().into();
-                let eye = player_camera.eye();
+                let eye = player.camera.eye();
 
                 let delta = 0.0001f64;
                 let mut i = 0f32;
@@ -158,14 +147,14 @@ pub fn main() {
                 }
             }
 
-            player.entity.draw(&mut player_camera, &lighting_program);
-            //cube.draw(&mut player_camera, &lighting_program);
-            ground.draw(&mut player_camera, &lighting_program);
+            player.entity.draw(&mut player.camera, &lighting_program);
+            //cube.draw(&mut player.camera, &lighting_program);
+            ground.draw(&mut player.camera, &lighting_program);
 
             for marker in &mut ground_vertex_markers {
-                marker.draw(&mut player_camera, &lighting_program);
+                marker.draw(&mut player.camera, &lighting_program);
             }
-            rt_marker.draw(&mut player_camera, &lighting_program);
+            rt_marker.draw(&mut player.camera, &lighting_program);
 
 
             glfw.poll_events();
@@ -177,34 +166,32 @@ pub fn main() {
             
             // player loop
             player.mv(vec3a(
-                (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*f32::sin(player_camera.camera_angle), 0.0, // use camera angle as direction
-                (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*f32::cos(player_camera.camera_angle))); // for the player to move towards
+                (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*f32::sin(player.camera.camera_angle), 0.0, // use camera angle as direction
+                (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*f32::cos(player.camera.camera_angle))); // for the player to move towards
             player.mvhelper(); 
             
-            // player_camera loop
-            player_camera.player_pos=player.pos();
-            player_camera.camera_angle += (if f32::abs(player.vec.x) > 0.0001 || f32::abs(player.vec.z) > 0.0001 {1}
+            // player.camera loop
+            player.camera.player_pos=player.pos();
+            player.camera.camera_angle += (if f32::abs(player.vec.x) > 0.0001 || f32::abs(player.vec.z) > 0.0001 {1}
                 else {keystates[0]-keystates[2]}) as f32 * CAMERA_DELTA * (keystates[1]-keystates[3]) as f32;
-            player_camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[5]) as f32;
+            player.camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[5]) as f32;
 
 
-            /*
-            //mouse control
+            // //mouse control
 
-            if x < width as f64 * PAN_TRESHOLD_RATIO{
-                player_camera.camera_angle += CAMERA_DELTA;
+            if x < scr_w as f64 * PAN_TRESHOLD_RATIO{
+                player.camera.camera_angle += CAMERA_DELTA;
             }
-            else if x > width as f64 * (1.0-PAN_TRESHOLD_RATIO){
-                player_camera.camera_angle -= CAMERA_DELTA;
+            else if x > scr_w as f64 * (1.0-PAN_TRESHOLD_RATIO){
+                player.camera.camera_angle -= CAMERA_DELTA;
             }
 
-            if y < height as f64 * TILT_TRESHOLD_RATIO{
-                player_camera.tilt -= CAMERA_DELTA;
+            if y < scr_h as f64 * TILT_TRESHOLD_RATIO{
+                player.camera.tilt -= CAMERA_DELTA;
             }
-            else if y > height as f64 * (1.0-TILT_TRESHOLD_RATIO){
-                player_camera.tilt += CAMERA_DELTA;
+            else if y > scr_h as f64 * (1.0-TILT_TRESHOLD_RATIO){
+                player.camera.tilt += CAMERA_DELTA;
             }
-            */
 
 
             thread::sleep(DELTA_TIME);

@@ -8,6 +8,7 @@ use crate::shader::ShaderProgram;
 pub struct Player {
     pub vec: Vec3A,
     pub entity: Entity,
+    pub camera: PlayerCamera
 }
 
 pub struct Entity {
@@ -18,11 +19,12 @@ pub struct Entity {
 }
 
 impl Player {
-    pub fn new(stl_path: &str, pos: Vec3A, color: Vec3A) -> Self {
+    pub fn new(stl_path: &str, pos: Vec3A, color: Vec3A, camera: PlayerCamera) -> Self {
         let e = Entity::new(stl_path,pos,color);
         Player {
             vec: vec3a(0.0, 0.0, 0.0),
             entity: e,
+            camera: camera,
         }
     }
     pub fn mv(&mut self, t_vec: Vec3A) {
