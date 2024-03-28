@@ -104,7 +104,7 @@ impl Entity {
             lighting_program.set_mat4f(b"model\0",&t_mat.to_cols_array()[0]);
             lighting_program.set_vec3f(b"objectColor\0", self.color[0], self.color[1], self.color[2]);
             gl::BindVertexArray(self.vao);
-            gl::DrawArrays(gl::TRIANGLES, 0, self.mesh.vertices.len() as i32);
+            gl::DrawArrays(gl::TRIANGLES, 0, self.mesh.vertices_normals.len() as i32);
     }
     pub fn mutate(&mut self, closest: Vec3A, direction: Vec3A) {
         let m = &mut self.mesh;
@@ -130,20 +130,25 @@ impl Entity {
         //         }
         //     }
         // }false
+        
 
         for face in &other.mesh.faces {
-            let a = other.mesh.vertices[face.vertices[0]];
-            let b = other.mesh.vertices[face.vertices[1]];
-            let c = other.mesh.vertices[face.vertices[2]];
+            let a = other.mesh.vertices[face.vertices[0]] + other.pos;
+            let b = other.mesh.vertices[face.vertices[1]] + other.pos;
+            let c = other.mesh.vertices[face.vertices[2]] + other.pos;
             let face_normal = vec3a(face.normal[0],face.normal[1],face.normal[2]);
             let face_mid = (a+b+c)/3.0;
 
-            if face_mid.distance(self.pos) < 0.3{
-                if a.project_onto(face_normal).length_squared() < 0.01 || b.project_onto(face_normal).length_squared() < 0.01 ||
-                c.project_onto(face_normal).length_squared() < 0.01 { return true }
+            if face_mid.distance(self.pos) < 0.3 {
+                let condition1 = face_mid.distance(self.pos) < face_mid.distance(a);
+                let condition2 = face_mid.distance(self.pos) < face_mid.distance(b);
+                let condition3 = face_mid.distance(self.pos) < face_mid.distance(c);
+                let condition = condition1 || condition2 || condition3;
+                if (self.pos-a).project_onto(face_normal).length_squared() < 0.01 && condition { return true }
             }
-                
-        }false
+        }
+
+        false
 
         // if self.pos.distance(other.pos) < 0.5{ // this works for one on one detection - not rly laggy
         //     for vertex2 in &other.mesh.vertices {

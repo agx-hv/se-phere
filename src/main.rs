@@ -139,21 +139,19 @@ pub fn main() {
 
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
+
+            player.entity.draw(&mut player.camera, &lighting_program);
+            ground.draw(&mut player.camera, &lighting_program);
+
             for marker in &mut ground_vertex_markers {
                 if player.entity.detect_col(&marker){ 
                     marker.set_color(vec3a(0.1, 0.5, 0.2));
                 } else {
                     marker.set_color(vec3a(0.8, 0.2, 0.8));
                 }
-            }
-
-            player.entity.draw(&mut player.camera, &lighting_program);
-            //cube.draw(&mut player.camera, &lighting_program);
-            ground.draw(&mut player.camera, &lighting_program);
-
-            for marker in &mut ground_vertex_markers {
                 marker.draw(&mut player.camera, &lighting_program);
             }
+            cube.draw(&mut player.camera, &lighting_program);
             rt_marker.draw(&mut player.camera, &lighting_program);
 
 
