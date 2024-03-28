@@ -145,14 +145,16 @@ pub fn main() {
 
             for marker in &mut ground_vertex_markers {
                 if player.entity.detect_col(&marker){ 
-                    marker.set_color(vec3a(0.1, 0.5, 0.2));
+                    marker.set_color(vec3a(0.8, 0.1, 0.1));
+                } else if rt_marker.detect_col(&marker) {
+                    marker.set_color(vec3a(0.1, 0.8, 0.1));
                 } else {
                     marker.set_color(vec3a(0.8, 0.2, 0.8));
                 }
                 marker.draw(&mut player.camera, &lighting_program);
             }
             cube.draw(&mut player.camera, &lighting_program);
-            rt_marker.draw(&mut player.camera, &lighting_program);
+            //rt_marker.draw(&mut player.camera, &lighting_program);
 
 
             glfw.poll_events();
