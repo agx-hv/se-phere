@@ -17,8 +17,8 @@ use std::{thread, time};
 const DELTA_TIME: time::Duration = time::Duration::from_millis(16);
 
 const ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0);
-const MOVEMENT_DELTA: f32 = 0.001;
-const CAMERA_DELTA: f32 = 0.01;
+const MOVEMENT_DELTA: f32 = 0.003;
+const CAMERA_DELTA: f32 = 0.02;
 const PAN_TRESHOLD_RATIO:f64=0.1; //how close to the edge before panning
 const TILT_TRESHOLD_RATIO:f64=0.1; //how close to the edge before tilting
 const ZOOM_DELTA:f32 = 0.1;
@@ -34,32 +34,42 @@ pub fn main() {
         "assets/mesh/small_sphere.stl",
         vec3a(0.1, 0.1, 0.3),
         vec3a(0.1, 0.5, 0.2),
-        camera::PlayerCamera::new(vec3a(0.0, 1.0, 3.0),scr_w as f32/scr_h as f32),);
+        camera::PlayerCamera::new(vec3a(0.0, 1.0, 3.0),scr_w as f32/scr_h as f32),
+        1.0,
+    );
 
     let mut cube = Entity::new(
         "assets/mesh/cube.stl",
         ORIGIN,
-        vec3a(0.2, 0.1, 0.8));
+        vec3a(0.2, 0.1, 0.8),
+        1.0,
+    );
 
     let mut ground = Entity::new(
         "assets/mesh/ground.stl",
         ORIGIN,
-        vec3a(0.4, 0.2, 0.1));
+        vec3a(0.4, 0.2, 0.1),
+        0.01,
+    );
 
     for vertex in &ground.mesh.vertices {
         if vertex[1] == 0.0 {
             let marker = Entity::new(
                 "assets/mesh/cube.stl",
                 *vertex,
-                vec3a(0.8, 0.2, 0.8));
-            ground_vertex_markers.push(marker);
+                vec3a(0.8, 0.2, 0.8),
+                0.0,
+                );
+            //ground_vertex_markers.push(marker);
         }
     }
 
     let mut rt_marker = Entity::new(
         "assets/mesh/cube.stl",
         vec3a(0.0,0.3,0.0),
-        vec3a(0.1, 0.1, 0.1));
+        vec3a(0.1, 0.1, 0.1),
+        0.0,
+        );
 
     //keys
     let mut keystates = [0;16];
@@ -226,6 +236,9 @@ fn handle_window_event(glfw: &mut glfw::Glfw, window: &mut glfw::Window, event: 
                     window.set_monitor(glfw::WindowMode::FullScreen(m.expect("Failed to set Fullscreen")),0,0,1920,1080,Some(60));
                 });
             }
+        }
+        glfw::WindowEvent::Key(glfw::Key::Space, _, glfw::Action::Press, _) => {
+            player.vec[1] += 0.1;
         }
         glfw::WindowEvent::Key(key,_,action,modifier) =>{
             keys::handle_key_event(window, key, action,modifier, keystates);}

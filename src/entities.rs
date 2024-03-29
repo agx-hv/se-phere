@@ -4,6 +4,7 @@ use glam::*;
 use crate::meshloader::Mesh;
 use crate::camera::PlayerCamera;
 use crate::shader::ShaderProgram;
+use num_traits::abs;
 
 pub struct Player {
     pub vec: Vec3A,
@@ -16,11 +17,12 @@ pub struct Entity {
     pub pos: Vec3A,
     pub vao: u32,
     pub color: Vec3A,
+    pub bounce: f32,
 }
 
 impl Player {
-    pub fn new(stl_path: &str, pos: Vec3A, color: Vec3A, camera: PlayerCamera) -> Self {
-        let e = Entity::new(stl_path,pos,color);
+    pub fn new(stl_path: &str, pos: Vec3A, color: Vec3A, camera: PlayerCamera, bounce: f32) -> Self {
+        let e = Entity::new(stl_path,pos,color,bounce);
         Player {
             vec: vec3a(0.0, 0.0, 0.0),
             entity: e,
@@ -37,7 +39,7 @@ impl Player {
         self.vec *= VEC_DELTA;
 
         const GRAV_DELTA: f32 = 0.01;
-        // if self.entity.pos.y > 0.15 {self.vec += vec3a(0.0, -GRAV_DELTA, 0.0)} // gravity as vec3a.y
+        self.vec += vec3a(0.0, -GRAV_DELTA, 0.0); // gravity as vec3a.y
     }
     pub fn pos(&self) -> Vec3A {
         self.entity.pos
@@ -49,63 +51,65 @@ impl Player {
                                                 //      or in fact if it's bcs self.vec doesn't exist, then what if all entities have vec
         let collided = self.entity.detect_col(other);
         if collided.0 {
-            self.vec = vec3a(collided.1.x,collided.1.y,collided.1.z)*0.01; // bounce from collision
+                let norm = vec3a(collided.1.x,collided.1.y,collided.1.z);
+                self.vec -= self.vec.dot(norm) * norm * (1.0 + self.entity.bounce*other.bounce); // bounce from collision
+            }
         }
     }
-}
 
-impl Entity {
-    pub fn new(stl_path: &str, pos: Vec3A, color: Vec3A) -> Self {
-        let m = Mesh::new(stl_path);
-        Entity {
-            mesh: m,
-            pos,
-            vao: 0,
-            color,
+    impl Entity {
+        pub fn new(stl_path: &str, pos: Vec3A, color: Vec3A, bounce: f32) -> Self {
+            let m = Mesh::new(stl_path);
+            Entity {
+                mesh: m,
+                pos,
+                vao: 0,
+                color,
+                bounce,
+            }
         }
-    }
-    pub fn mv(&mut self, t_vec: Vec3A) {
-        self.pos += t_vec;
-    }
-    pub fn set_color(&mut self, color: Vec3A) {
-        self.color = color;
-    }
-    pub unsafe fn gl_init(&mut self) {
-        let mut vbo = 0u32;
+        pub fn mv(&mut self, t_vec: Vec3A) {
+            self.pos += t_vec;
+        }
+        pub fn set_color(&mut self, color: Vec3A) {
+            self.color = color;
+        }
+        pub unsafe fn gl_init(&mut self) {
+            let mut vbo = 0u32;
 
-        let vertices = self.mesh.vertices_flattened();
+            let vertices = self.mesh.vertices_flattened();
 
-        gl::GenVertexArrays(1, &mut self.vao);
-        assert_ne!(self.vao,0);
-        gl::BindVertexArray(self.vao);
+            gl::GenVertexArrays(1, &mut self.vao);
+            assert_ne!(self.vao,0);
+            gl::BindVertexArray(self.vao);
 
-        gl::GenBuffers(1, &mut vbo);
-        assert_ne!(vbo,0);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+            gl::GenBuffers(1, &mut vbo);
+            assert_ne!(vbo,0);
+            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
 
-        gl::BufferData(gl::ARRAY_BUFFER, 
-            (vertices.len() * std::mem::size_of::<f32>()) as isize,
-            vertices.as_ptr().cast(),
-            gl::STATIC_DRAW);
-        gl::VertexAttribPointer(
-            0,
-            3,
-            gl::FLOAT,
-            gl::FALSE,
-            (6*std::mem::size_of::<f32>()).try_into().unwrap(),
-            0 as *const _,
-        );
-        gl::EnableVertexAttribArray(0);
-        gl::VertexAttribPointer(
-            1,
-            3,
-            gl::FLOAT,
-            gl::FALSE,
-            (6*std::mem::size_of::<f32>()).try_into().unwrap(),
-            (3*std::mem::size_of::<f32>()) as *const _,
-        );
-        gl::EnableVertexAttribArray(1);
-    }
+            gl::BufferData(gl::ARRAY_BUFFER, 
+                (vertices.len() * std::mem::size_of::<f32>()) as isize,
+                vertices.as_ptr().cast(),
+                gl::STATIC_DRAW);
+            gl::VertexAttribPointer(
+                0,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                (6*std::mem::size_of::<f32>()).try_into().unwrap(),
+                0 as *const _,
+            );
+            gl::EnableVertexAttribArray(0);
+            gl::VertexAttribPointer(
+                1,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                (6*std::mem::size_of::<f32>()).try_into().unwrap(),
+                (3*std::mem::size_of::<f32>()) as *const _,
+            );
+            gl::EnableVertexAttribArray(1);
+        }
 
     pub unsafe fn draw(&self, camera: &mut PlayerCamera, lighting_program: &ShaderProgram) {
             let t_mat = Mat4::from_translation(self.pos.into());
