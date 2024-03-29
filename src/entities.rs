@@ -7,7 +7,7 @@ use crate::shader::ShaderProgram;
 
 pub struct Player {
     pub vec: Vec3A,
-    pub entity: Entity,
+    pub entity: Entity, // inherits Entity struct
     pub camera: PlayerCamera
 }
 
@@ -27,16 +27,17 @@ impl Player {
             camera,
         }
     }
-    pub fn mv(&mut self, t_vec: Vec3A) {
+    pub fn mv(&mut self, t_vec: Vec3A) { // function to add velocity
         self.vec += t_vec;
     }
-    pub fn mvhelper(&mut self) {
+    pub fn mvhelper(&mut self) { // function to manage velocity - self.vec
         self.entity.pos += self.vec;
 
         const VEC_DELTA: f32 = 0.95;
         self.vec *= VEC_DELTA;
 
-        if self.entity.pos.y > 0.15 {self.vec += vec3a(0.0, -0.01, 0.0)} // gravity
+        const GRAV_DELTA: f32 = 0.01;
+        // if self.entity.pos.y > 0.15 {self.vec += vec3a(0.0, -GRAV_DELTA, 0.0)} // gravity as vec3a.y
     }
     pub fn pos(&self) -> Vec3A {
         self.entity.pos

@@ -33,14 +33,14 @@ impl PlayerCamera{
             self.radius = 0.1
         }
         if self.camera_angle<0.0{
-            self.camera_angle += 2.0*PI; //alows for camera to spin horinzontaly constantly around player while preventing int overflow
+            self.camera_angle += 2.0*PI; // allows for camera to spin horinzontaly constantly around player while preventing int overflow
         }
         self.camera_angle=self.camera_angle%(2.0*PI);
         if self.tilt > PI/2.0{
-            self.tilt = PI/2.0; //clip max tilt to 90deg
+            self.tilt = PI/2.0; // clip max tilt to 90deg
         }
         else if self.tilt < 1e-6{
-            self.tilt = 1e-6; //prevent edge case of completely flat camera
+            self.tilt = 1e-6; // prevent edge case of completely flat camera
         }
         let eye: Vec3A = vec3a(
             self.radius*f32::sin(self.camera_angle)*f32::cos(self.tilt),

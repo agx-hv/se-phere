@@ -32,13 +32,15 @@ pub fn main() {
     // initializing entities as Entity
     let mut player = Player::new(
         "assets/mesh/small_sphere.stl",
-        vec3a(0.1, 1.0, 0.3),
+        vec3a(0.1, 0.1, 0.3),
         vec3a(0.1, 0.5, 0.2),
         camera::PlayerCamera::new(vec3a(0.0, 1.0, 3.0),scr_w as f32/scr_h as f32),);
+
     let mut cube = Entity::new(
         "assets/mesh/cube.stl",
         ORIGIN,
         vec3a(0.2, 0.1, 0.8));
+
     let mut ground = Entity::new(
         "assets/mesh/ground.stl",
         ORIGIN,
@@ -50,7 +52,6 @@ pub fn main() {
                 "assets/mesh/cube.stl",
                 *vertex,
                 vec3a(0.8, 0.2, 0.8));
-            
             ground_vertex_markers.push(marker);
         }
     }
@@ -99,8 +100,7 @@ pub fn main() {
             player.camera.aspect = scr_w as f32 / scr_h as f32;
             gl::Viewport(0,0,scr_w,scr_h);
 
-            // ground mesh selection
-            //mouse tracking
+            // ground mesh selection / mouse tracking using rt_marker
             let (x, y) = window.get_cursor_pos();
 
             if keystates[10] == 0 || keystates [11] ==0 {
@@ -135,7 +135,6 @@ pub fn main() {
                     i += 1.0;
                 }
                 rt_marker.pos = p;
-                
             }
 
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
@@ -158,6 +157,7 @@ pub fn main() {
                 // player.collide(marker);
             }
 
+            if player.entity.detect_col(&cube).0 {player.collide(&cube)};
             cube.draw(&mut player.camera, &lighting_program);
 
             //rt_marker.draw(&mut player.camera, &lighting_program);
@@ -179,8 +179,9 @@ pub fn main() {
             // player.camera loop
             player.camera.player_pos=player.pos();
             player.camera.camera_angle += (if f32::abs(player.vec.x) > 0.0001 || f32::abs(player.vec.z) > 0.0001 {1}
-                else {keystates[0]-keystates[2]}) as f32 * CAMERA_DELTA * (keystates[1]-keystates[3]) as f32;
-            player.camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[5]) as f32;
+                // allows spin only if player vec is > 0
+                else {0}) as f32 * CAMERA_DELTA * (keystates[1]-keystates[3]) as f32; // ks[1]-ks[3] as a & d keys - left/right
+            player.camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[5]) as f32; // ks[4]-ks[5] as i & k keys - pan up/pan down
 
 
             // //mouse control
