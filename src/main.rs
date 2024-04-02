@@ -49,7 +49,7 @@ pub fn main() {
         "assets/mesh/ground.stl",
         ORIGIN,
         vec3a(0.4, 0.2, 0.1),
-        0.01,
+        0.0,
     );
 
     for vertex in &ground.mesh.vertices {
@@ -152,13 +152,13 @@ pub fn main() {
 
             player.entity.draw(&mut player.camera, &lighting_program);
 
-            if player.entity.detect_col(&ground).0 {player.collide(&ground)};
+            if player.detect_col(&ground).0 {player.collide(&ground)};
             ground.draw(&mut player.camera, &lighting_program);
 
             for marker in &mut ground_vertex_markers {
-                if player.entity.detect_col(&marker).0{ 
+                if player.detect_col(&marker).0 { 
                     // marker.set_color(vec3a(0.8, 0.1, 0.1));
-                } else if rt_marker.detect_col(&marker).0 {
+                //} else if rt_marker.detect_col(&marker).0 {
                     // marker.set_color(vec3a(0.1, 0.8, 0.1));
                 } else {
                     // marker.set_color(vec3a(0.8, 0.2, 0.8));
@@ -167,7 +167,7 @@ pub fn main() {
                 // player.collide(marker);
             }
 
-            if player.entity.detect_col(&cube).0 {player.collide(&cube)};
+            if player.detect_col(&cube).0 {player.collide(&cube)};
             cube.draw(&mut player.camera, &lighting_program);
 
             //rt_marker.draw(&mut player.camera, &lighting_program);

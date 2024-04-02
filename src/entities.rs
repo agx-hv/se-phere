@@ -9,7 +9,8 @@ use num_traits::abs;
 pub struct Player {
     pub vec: Vec3A,
     pub entity: Entity, // inherits Entity struct
-    pub camera: PlayerCamera
+    pub camera: PlayerCamera,
+    pub radius: f32,
 }
 
 pub struct Entity {
@@ -27,12 +28,15 @@ impl Player {
             vec: vec3a(0.0, 0.0, 0.0),
             entity: e,
             camera,
+            radius: 0.1,
         }
     }
     pub fn mv(&mut self, t_vec: Vec3A) { // function to add velocity
         self.vec += t_vec;
     }
     pub fn mvhelper(&mut self) { // function to manage velocity - self.vec
+                                 // TODO: Do not move player if going to collide in the next tick
+
         self.entity.pos += self.vec;
 
         const VEC_DELTA: f32 = 0.95;
@@ -47,15 +51,58 @@ impl Player {
     pub fn mesh(&self) -> &Mesh {
         &self.entity.mesh
     }
-    pub fn collide(&mut self, other: &Entity) { //TODO: actually why do we have 'two' col detection fns.. can this vec not be run w col_det
-                                                //      or in fact if it's bcs self.vec doesn't exist, then what if all entities have vec
-        let collided = self.entity.detect_col(other);
-        if collided.0 {
-                let norm = vec3a(collided.1.x,collided.1.y,collided.1.z);
-                self.vec -= self.vec.dot(norm) * norm * (1.0 + self.entity.bounce*other.bounce); // bounce from collision
-            }
+    pub fn collide(&mut self, other: &Entity) { 
+        let (collided, norm, dist) = self.detect_col(other);
+        if collided {
+            self.entity.pos += dist*norm; // TODO: Prevent clipping into collided object (temporary fix, remove later)
+            self.vec -= self.vec.dot(norm) * norm * (1.0 + self.entity.bounce*other.bounce); // bonuce formula
         }
     }
+
+    pub fn detect_col(&self, other: &Entity) -> (bool, Vec3A, f32) {
+        // Performing collision detection logic
+        // There must be a more efficient way other than checking ALL mesh faces
+        for face in &other.mesh.faces {
+            let a = other.mesh.vertices[face.vertices[0]] + other.pos;
+            let b = other.mesh.vertices[face.vertices[1]] + other.pos;
+            let c = other.mesh.vertices[face.vertices[2]] + other.pos;
+            let face_normal = vec3a(face.normal[0],face.normal[1],face.normal[2]).normalize();
+
+            let d = (self.entity.pos-a).project_onto(face_normal).length();
+
+            // Check if plane intersects sphere
+            if d <= self.radius {
+                let p = self.entity.pos - d*face_normal;
+                let n = (b-a).cross(c-a);
+                let area = n.length() * 0.5;
+
+                // Barycentric check if sphere-plane intersection point is in triangle
+                let f = |x: Vec3A, y:Vec3A, z: Vec3A| -> f32 {
+                    let ng = (y-x).cross(z-x);
+                    let m = ng.dot(n);
+                    if m>=0.0 {
+                        return 0.5*ng.length()/area;
+                    } else {
+                        return -0.5*ng.length()/area;
+                    }
+                };
+
+                let alpha = f(p,b,c);
+                let beta = f(a,p,c);
+                let gamma = f(a,b,p);
+
+                let inrange = |x| (x>=0.0 && x<=1.0);
+                if inrange(alpha) && inrange(beta) && inrange(gamma) {
+                    return (true,face_normal,self.radius-d);
+                }
+            }
+        }
+
+        (false,vec3a(0.0,0.0,0.0),0.0)
+
+    }
+
+}
 
     impl Entity {
         pub fn new(stl_path: &str, pos: Vec3A, color: Vec3A, bounce: f32) -> Self {
@@ -122,44 +169,6 @@ impl Player {
     }
     pub fn mutate(&mut self, closest: Vec3A, direction: Vec3A) {
         let m = &mut self.mesh;
-    }
-
-    pub fn detect_col(&self, other: &Entity) -> (bool, Vec3A) {
-        // Performing collision detection logic
-        for face in &other.mesh.faces {
-            let a = other.mesh.vertices[face.vertices[0]] + other.pos;
-            let b = other.mesh.vertices[face.vertices[1]] + other.pos;
-            let c = other.mesh.vertices[face.vertices[2]] + other.pos;
-            let face_normal = vec3a(face.normal[0],face.normal[1],face.normal[2]);
-            let face_mid = (a+b+c)/3.0; // get centroid of face vertices' points
-
-            if face_mid.distance(self.pos) < 0.3 {
-                let condition1 = face_mid.distance(self.pos) < face_mid.distance(a);
-                let condition2 = face_mid.distance(self.pos) < face_mid.distance(b);
-                let condition3 = face_mid.distance(self.pos) < face_mid.distance(c);
-                let condition = condition1 || condition2 || condition3; // check if player is close enough to face
-                if (self.pos-a).project_onto(face_normal).length_squared() < 0.01 && condition { return (true,face_normal) }
-            }
-        }
-
-        (false,vec3a(0.0,0.0,0.0))
-
-        // if self.pos.distance(other.pos) < 0.5{ // this works for one on one detection - not rly laggy
-        //     for vertex2 in &other.mesh.vertices {
-        //     if f32::abs(self.pos.x - vertex2.x)<0.2 &&
-        //     f32::abs(self.pos.z - vertex2.z)<0.2{
-        //             return true; // Collision detected
-        //         }
-        //     }
-        // }false
-
-        // let collision_threshold = 0.2; // this works for smooth detection - only center entity - lights everything
-        // for vert in &other.mesh.vertices {
-        //     let distance = self.pos.distance(*vert);
-        //     if distance < collision_threshold {
-        //         return true;
-        //     }
-        // }false
     }
 
 
