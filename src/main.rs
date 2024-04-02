@@ -3,6 +3,7 @@ extern crate gl;
 extern crate glam;
 extern crate num_traits;
 use glam::{vec3a, vec4};
+use glam::Vec3Swizzles;
 use glam::f32:: Vec3A;
 use glfw::Context;
 pub mod shader;
@@ -27,7 +28,7 @@ pub fn main() {
     let mut scr_w = 1920i32;
     let mut scr_h = 1080i32;
     
-    let mut ground_vertex_markers = vec!();
+    //let mut ground_vertex_markers = vec!();
 
     // initializing entities as Entity
     let mut player = Player::new(
@@ -44,6 +45,7 @@ pub fn main() {
         vec3a(0.2, 0.1, 0.8),
         1.0,
     );
+    //cube.set_scale(2.0,2.0,2.0);
 
     let mut ground = Entity::new(
         "assets/mesh/ground.stl",
@@ -53,15 +55,14 @@ pub fn main() {
     );
 
     for vertex in &ground.mesh.vertices {
-        if vertex[1] == 0.0 {
-            let marker = Entity::new(
-                "assets/mesh/cube.stl",
-                *vertex,
-                vec3a(0.8, 0.2, 0.8),
-                0.0,
-                );
-            //ground_vertex_markers.push(marker);
-        }
+        let mut marker = Entity::new(
+            "assets/mesh/cube.stl",
+            *vertex,
+            vec3a(0.8, 0.2, 0.8),
+            0.0,
+            );
+        //marker.set_scale(0.2,0.2,0.2);
+        //ground_vertex_markers.push(marker);
     }
 
     let mut rt_marker = Entity::new(
@@ -69,7 +70,8 @@ pub fn main() {
         vec3a(0.0,0.3,0.0),
         vec3a(0.1, 0.1, 0.1),
         0.0,
-        );
+    );
+    rt_marker.set_scale(0.1,0.1,0.1);
 
     //keys
     let mut keystates = [0;16];
@@ -100,9 +102,11 @@ pub fn main() {
         cube.gl_init();
         ground.gl_init();
         rt_marker.gl_init();
+        /*
         for marker in &mut ground_vertex_markers {
-            // marker.gl_init();
+            marker.gl_init();
         }
+        */
 
         while !window.should_close() {
 
@@ -113,7 +117,9 @@ pub fn main() {
             // ground mesh selection / mouse tracking using rt_marker
             let (x, y) = window.get_cursor_pos();
 
-            if keystates[10] == 0 || keystates [11] ==0 {
+            let mut i = 0 as usize;
+
+            if keystates[10] == 1 || keystates [11] == 1 {
                 let p = player.camera.proj_mat();
                 let v = player.camera.view_mat();
                 let pvi = (p*v).inverse();
@@ -133,18 +139,19 @@ pub fn main() {
                 rsw /= rsw[3];
                 let mut rew = pvi*re;
                 rew /= rew[3];
-                let raydir: Vec3A = (rew-rsw).normalize().into();
                 let eye = player.camera.eye();
+                let mut raydir: Vec3A = (rew-rsw).normalize().into();
 
-                let delta = 0.0001f64;
-                let mut i = 0f32;
-                let mut p = eye;
-
-                while num_traits::abs(p[1]) > 0.01 && i <= 10000.0 {
-                    p += (delta as f32)*i*raydir;
-                    i += 1.0;
+                if raydir.dot(vec3a(0.0,1.0,0.0)) < 0.0 {
+                    rt_marker.pos = eye - raydir*eye.y/raydir.y;
                 }
-                rt_marker.pos = p;
+                i = ground.closest_vertex_index(rt_marker.pos.xz());
+                if keystates[10] == 1 && keystates[11] == 0 {
+                    ground.mesh.mutate(i, vec3a(0.0,1.0,0.0));
+                }
+                if keystates[10] == 0 && keystates[11] == 1 {
+                    ground.mesh.mutate(i, vec3a(0.0,-1.0,0.0));
+                }
             }
 
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
@@ -155,17 +162,23 @@ pub fn main() {
             if player.detect_col(&ground).0 {player.collide(&ground)};
             ground.draw(&mut player.camera, &lighting_program);
 
+            /*
+            let mut j = 0 as usize;
             for marker in &mut ground_vertex_markers {
-                if player.detect_col(&marker).0 { 
-                    // marker.set_color(vec3a(0.8, 0.1, 0.1));
-                //} else if rt_marker.detect_col(&marker).0 {
-                    // marker.set_color(vec3a(0.1, 0.8, 0.1));
+                if i==j {
+                    if keystates[10] == 1 && keystates[11] == 0 {
+                        marker.set_color(vec3a(0.8, 0.2, 0.0));
+                    }
+                    if keystates[10] == 0 && keystates[11] == 1 {
+                        marker.set_color(vec3a(0.8, 0.2, 0.8));
+                    }
                 } else {
-                    // marker.set_color(vec3a(0.8, 0.2, 0.8));
+                    marker.set_color(vec3a(0.1,0.8,0.1));
                 }
-                // marker.draw(&mut player.camera, &lighting_program);
-                // player.collide(marker);
+                marker.draw(&mut player.camera, &lighting_program);
+                j += 1;
             }
+            */
 
             if player.detect_col(&cube).0 {player.collide(&cube)};
             cube.draw(&mut player.camera, &lighting_program);

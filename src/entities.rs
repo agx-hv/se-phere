@@ -1,6 +1,7 @@
 extern crate glam;
 extern crate gl;
 use glam::*;
+use glam::Vec3Swizzles;
 use crate::meshloader::Mesh;
 use crate::camera::PlayerCamera;
 use crate::shader::ShaderProgram;
@@ -17,8 +18,10 @@ pub struct Entity {
     pub mesh: Mesh,
     pub pos: Vec3A,
     pub vao: u32,
+    pub vbo: u32,
     pub color: Vec3A,
     pub bounce: f32,
+    pub scale: Vec3A,
 }
 
 impl Player {
@@ -104,72 +107,92 @@ impl Player {
 
 }
 
-    impl Entity {
-        pub fn new(stl_path: &str, pos: Vec3A, color: Vec3A, bounce: f32) -> Self {
-            let m = Mesh::new(stl_path);
-            Entity {
-                mesh: m,
-                pos,
-                vao: 0,
-                color,
-                bounce,
-            }
+impl Entity {
+    pub fn new(stl_path: &str, pos: Vec3A, color: Vec3A, bounce: f32) -> Self {
+        let scale = vec3a(1.0,1.0,1.0);
+        let m = Mesh::new(stl_path, scale);
+        Entity {
+            mesh: m,
+            pos,
+            vao: 0,
+            vbo: 0,
+            color,
+            bounce,
+            scale,
         }
-        pub fn mv(&mut self, t_vec: Vec3A) {
-            self.pos += t_vec;
-        }
-        pub fn set_color(&mut self, color: Vec3A) {
-            self.color = color;
-        }
-        pub unsafe fn gl_init(&mut self) {
-            let mut vbo = 0u32;
-
-            let vertices = self.mesh.vertices_flattened();
-
-            gl::GenVertexArrays(1, &mut self.vao);
-            assert_ne!(self.vao,0);
-            gl::BindVertexArray(self.vao);
-
-            gl::GenBuffers(1, &mut vbo);
-            assert_ne!(vbo,0);
-            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-
-            gl::BufferData(gl::ARRAY_BUFFER, 
-                (vertices.len() * std::mem::size_of::<f32>()) as isize,
-                vertices.as_ptr().cast(),
-                gl::STATIC_DRAW);
-            gl::VertexAttribPointer(
-                0,
-                3,
-                gl::FLOAT,
-                gl::FALSE,
-                (6*std::mem::size_of::<f32>()).try_into().unwrap(),
-                0 as *const _,
-            );
-            gl::EnableVertexAttribArray(0);
-            gl::VertexAttribPointer(
-                1,
-                3,
-                gl::FLOAT,
-                gl::FALSE,
-                (6*std::mem::size_of::<f32>()).try_into().unwrap(),
-                (3*std::mem::size_of::<f32>()) as *const _,
-            );
-            gl::EnableVertexAttribArray(1);
-        }
-
-    pub unsafe fn draw(&self, camera: &mut PlayerCamera, lighting_program: &ShaderProgram) {
-            let t_mat = Mat4::from_translation(self.pos.into());
-            lighting_program.set_mat4f(b"proj\0",&camera.proj_mat().to_cols_array()[0]);
-            lighting_program.set_mat4f(b"view\0",&camera.view_mat().to_cols_array()[0]);
-            lighting_program.set_mat4f(b"model\0",&t_mat.to_cols_array()[0]);
-            lighting_program.set_vec3f(b"objectColor\0", self.color[0], self.color[1], self.color[2]);
-            gl::BindVertexArray(self.vao);
-            gl::DrawArrays(gl::TRIANGLES, 0, self.mesh.vertices_normals.len() as i32);
     }
-    pub fn mutate(&mut self, closest: Vec3A, direction: Vec3A) {
+    pub fn set_scale(&mut self, x: f32, y: f32, z: f32) {
+        self.scale = vec3a(x,y,z);
+        let m = Mesh::new(&self.mesh.path as &str , self.scale);
+        self.mesh = m;
+    }
+    pub fn mv(&mut self, t_vec: Vec3A) {
+        self.pos += t_vec;
+    }
+    pub fn set_color(&mut self, color: Vec3A) {
+        self.color = color;
+    }
+    pub unsafe fn gl_init(&mut self) {
+        gl::GenVertexArrays(1, &mut self.vao);
+        assert_ne!(self.vao,0);
+        gl::GenBuffers(1, &mut self.vbo);
+        assert_ne!(self.vbo,0);
+    }
+
+    pub unsafe fn draw(&mut self, camera: &mut PlayerCamera, lighting_program: &ShaderProgram) {
+
+        let vertices = self.mesh.vertices_flattened();
+        gl::BindVertexArray(self.vao);
+        gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+        gl::BufferData(gl::ARRAY_BUFFER, 
+            (vertices.len() * std::mem::size_of::<f32>()) as isize,
+            vertices.as_ptr().cast(),
+            gl::STATIC_DRAW);
+        gl::VertexAttribPointer(
+            0,
+            3,
+            gl::FLOAT,
+            gl::FALSE,
+            (6*std::mem::size_of::<f32>()).try_into().unwrap(),
+            0 as *const _,
+        );
+        gl::EnableVertexAttribArray(0);
+        gl::VertexAttribPointer(
+            1,
+            3,
+            gl::FLOAT,
+            gl::FALSE,
+            (6*std::mem::size_of::<f32>()).try_into().unwrap(),
+            (3*std::mem::size_of::<f32>()) as *const _,
+        );
+        gl::EnableVertexAttribArray(1);
+
+        let t_mat = Mat4::from_translation(self.pos.into());
+        lighting_program.set_mat4f(b"proj\0",&camera.proj_mat().to_cols_array()[0]);
+        lighting_program.set_mat4f(b"view\0",&camera.view_mat().to_cols_array()[0]);
+        lighting_program.set_mat4f(b"model\0",&t_mat.to_cols_array()[0]);
+        lighting_program.set_vec3f(b"objectColor\0", self.color[0], self.color[1], self.color[2]);
+
+        gl::BindVertexArray(self.vao);
+        gl::DrawArrays(gl::TRIANGLES, 0, self.mesh.vertices_normals.len() as i32);
+
+    }
+    pub fn closest_vertex_index(&mut self, xz: Vec2) -> usize {
         let m = &mut self.mesh;
-    }
+        let mut min_d = f32::MAX;
 
+        let mut closest_idx = 0 as usize;
+
+        let mut i = 0;
+        for v in &m.vertices {
+            let d = v.distance(vec3a(xz.x,0.0,xz.y));
+            if d < min_d {
+                min_d = d;
+                closest_idx = i;
+            }
+            i += 1;
+        }
+        closest_idx
+    }
 
 }
