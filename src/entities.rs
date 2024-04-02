@@ -10,6 +10,12 @@ pub struct Player {
     pub entity: Entity, // inherits Entity struct
     pub camera: PlayerCamera,
     pub radius: f32,
+    pub on_ground: bool,
+    pub ability: Ability,
+}
+
+pub struct Ability {
+    pub ground_mut_power: f32,
 }
 
 pub struct Entity {
@@ -30,6 +36,8 @@ impl Player {
             entity: e,
             camera,
             radius: 0.1,
+            on_ground: false,
+            ability: Ability{ground_mut_power: 0.01},
         }
     }
     pub fn mv(&mut self, t_vec: Vec3A) { // function to add velocity
@@ -38,13 +46,9 @@ impl Player {
         self.vec += vec3a(0.0, -GRAV_DELTA, 0.0); // gravity as vec3a.y
     }
     pub fn mvhelper(&mut self) { // function to manage velocity - self.vec
-                                 // TODO: Do not move player if going to collide in the next tick
-
         self.entity.pos += self.vec;
-
         const VEC_DELTA: f32 = 0.95;
         self.vec *= VEC_DELTA;
-
     }
     pub fn pos(&self) -> Vec3A {
         self.entity.pos
@@ -55,7 +59,7 @@ impl Player {
     pub fn collide(&mut self, other: &Entity) { 
         let (collided, norm, dist) = self.detect_col(other);
         if collided {
-            self.entity.pos += dist*norm; // TODO: Prevent clipping into collided object (temporary fix, remove later)
+            self.entity.pos += dist*norm; // Prevent clipping into collided object 
             self.vec -= self.vec.dot(norm) * norm * (1.0 + self.entity.bounce*other.bounce); // bonuce formula
         }
     }

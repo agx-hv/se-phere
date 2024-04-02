@@ -6,6 +6,8 @@ use glam::{vec3a, vec4};
 use glam::Vec3Swizzles;
 use glam::f32:: Vec3A;
 use glfw::Context;
+use glfw::Cursor;
+use glfw::StandardCursor::*;
 pub mod shader;
 use shader::ShaderProgram;
 pub mod camera; 
@@ -28,7 +30,6 @@ pub fn main() {
     let mut scr_w = 1920i32;
     let mut scr_h = 1080i32;
     
-    //let mut ground_vertex_markers = vec!();
 
     // initializing entities as Entity
     let mut player = Player::new(
@@ -54,7 +55,10 @@ pub fn main() {
         0.0,
     );
 
-    /*
+    ground.set_scale(3.0,1.0,3.0);
+
+    /* Add ground vertex marker cubes, uncomment to debug
+    let mut ground_vertex_markers = vec!();
     for vertex in &ground.mesh.vertices {
         let mut marker = Entity::new(
             "assets/mesh/cube.stl",
@@ -68,12 +72,12 @@ pub fn main() {
     */
 
     let mut rt_marker = Entity::new(
-        "assets/mesh/cube.stl",
+        "assets/mesh/rt_marker.stl",
         vec3a(0.0,0.3,0.0),
-        vec3a(0.1, 0.1, 0.1),
+        vec3a(0.2, 0.2, 0.2),
         0.0,
     );
-    rt_marker.set_scale(0.1,0.1,0.1);
+    rt_marker.set_scale(0.2,1.0,0.2);
 
     //keys
     let mut keystates = [0;16];
@@ -86,6 +90,7 @@ pub fn main() {
 
     window.set_key_polling(true);
     window.set_mouse_button_polling(true);
+    window.set_cursor(Some(Cursor::standard(VResize)));
     window.set_cursor_pos_polling(true);
     window.set_scroll_polling(true);
     window.make_current();
@@ -104,7 +109,8 @@ pub fn main() {
         cube.gl_init();
         ground.gl_init();
         rt_marker.gl_init();
-        /*
+
+        /* initialize ground vertex marker cubes
         for marker in &mut ground_vertex_markers {
             marker.gl_init();
         }
@@ -119,40 +125,43 @@ pub fn main() {
             // ground mesh selection / mouse tracking using rt_marker
             let (x, y) = window.get_cursor_pos();
 
-            let i: usize;
+            let mut i: usize = 0;
+
+            let p = player.camera.proj_mat();
+            let v = player.camera.view_mat();
+            let pvi = (p*v).inverse();
+            let ndc_x = (x as f32/scr_w as f32 - 0.5) * 2.0;
+            let ndc_y = (y as f32/scr_h as f32 - 0.5) * -2.0;
+            let rs = vec4(
+                ndc_x,
+                ndc_y,
+                -1.0, 
+                1.0);
+            let re = vec4(
+                ndc_x,
+                ndc_y,
+                0.0, 
+                1.0);
+            let mut rsw = pvi*rs;
+            rsw /= rsw[3];
+            let mut rew = pvi*re;
+            rew /= rew[3];
+            let eye = player.camera.eye();
+            let raydir: Vec3A = (rew-rsw).normalize().into();
+
+            if raydir.dot(vec3a(0.0,1.0,0.0)) < 0.0 || true {
+                i = ground.closest_vertex_index(rt_marker.pos.xz());
+                let ground_y = ground.mesh.vertices[i].y;
+                rt_marker.pos = eye - raydir*(eye.y-ground_y)/raydir.y;
+                //rt_marker.pos.y += ground_y;
+            }
 
             if keystates[10] == 1 || keystates [11] == 1 {
-                let p = player.camera.proj_mat();
-                let v = player.camera.view_mat();
-                let pvi = (p*v).inverse();
-                let ndc_x = (x as f32/scr_w as f32 - 0.5) * 2.0;
-                let ndc_y = (y as f32/scr_h as f32 - 0.5) * -2.0;
-                let rs = vec4(
-                    ndc_x,
-                    ndc_y,
-                    -1.0, 
-                    1.0);
-                let re = vec4(
-                    ndc_x,
-                    ndc_y,
-                    0.0, 
-                    1.0);
-                let mut rsw = pvi*rs;
-                rsw /= rsw[3];
-                let mut rew = pvi*re;
-                rew /= rew[3];
-                let eye = player.camera.eye();
-                let raydir: Vec3A = (rew-rsw).normalize().into();
-
-                if raydir.dot(vec3a(0.0,1.0,0.0)) < 0.0 {
-                    rt_marker.pos = eye - raydir*eye.y/raydir.y;
-                }
-                i = ground.closest_vertex_index(rt_marker.pos.xz());
                 if keystates[10] == 1 && keystates[11] == 0 {
-                    ground.mesh.mutate(i, vec3a(0.0,1.0,0.0));
+                    ground.mesh.mutate(i, vec3a(0.0,1.0,0.0), player.ability.ground_mut_power);
                 }
                 if keystates[10] == 0 && keystates[11] == 1 {
-                    ground.mesh.mutate(i, vec3a(0.0,-1.0,0.0));
+                    ground.mesh.mutate(i, vec3a(0.0,-1.0,0.0), player.ability.ground_mut_power);
                 }
             }
 
@@ -161,10 +170,13 @@ pub fn main() {
 
             player.entity.draw(&mut player.camera, &lighting_program);
 
-            if player.detect_col(&ground).0 {player.collide(&ground)};
+            if player.detect_col(&ground).0 {
+                player.collide(&ground);
+                player.on_ground = true;
+            };
             ground.draw(&mut player.camera, &lighting_program);
 
-            /*
+            /* Debug raycasting using ground vertex markers 
             let mut j = 0 as usize;
             for marker in &mut ground_vertex_markers {
                 if i==j {
@@ -252,8 +264,12 @@ fn handle_window_event(glfw: &mut glfw::Glfw, window: &mut glfw::Window, event: 
                 });
             }
         }
+        // jump
         glfw::WindowEvent::Key(glfw::Key::Space, _, glfw::Action::Press, _) => {
-            player.vec[1] += 0.1;
+            if player.on_ground {
+                player.on_ground = false;
+                player.vec[1] += 0.1;
+            }
         }
         glfw::WindowEvent::Key(key,_,action,modifier) =>{
             keys::handle_key_event(window, key, action,modifier, keystates);}

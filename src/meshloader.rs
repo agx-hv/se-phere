@@ -53,8 +53,8 @@ impl Mesh {
         }
         v
     }
-    pub fn mutate(&mut self, idx: usize, dir: Vec3A) {
-        self.vertices[idx] += dir*0.01;
+    pub fn mutate(&mut self, idx: usize, dir: Vec3A, amount: f32) {
+        self.vertices[idx] += dir*amount;
         self.vertices_normals = vec!();
         for face in &mut self.faces {
             let n: Vec3A;
