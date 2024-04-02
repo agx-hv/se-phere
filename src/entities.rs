@@ -1,11 +1,9 @@
 extern crate glam;
 extern crate gl;
 use glam::*;
-use glam::Vec3Swizzles;
 use crate::meshloader::Mesh;
 use crate::camera::PlayerCamera;
 use crate::shader::ShaderProgram;
-use num_traits::abs;
 
 pub struct Player {
     pub vec: Vec3A,
@@ -36,6 +34,8 @@ impl Player {
     }
     pub fn mv(&mut self, t_vec: Vec3A) { // function to add velocity
         self.vec += t_vec;
+        const GRAV_DELTA: f32 = 0.01;
+        self.vec += vec3a(0.0, -GRAV_DELTA, 0.0); // gravity as vec3a.y
     }
     pub fn mvhelper(&mut self) { // function to manage velocity - self.vec
                                  // TODO: Do not move player if going to collide in the next tick
@@ -45,8 +45,6 @@ impl Player {
         const VEC_DELTA: f32 = 0.95;
         self.vec *= VEC_DELTA;
 
-        const GRAV_DELTA: f32 = 0.01;
-        self.vec += vec3a(0.0, -GRAV_DELTA, 0.0); // gravity as vec3a.y
     }
     pub fn pos(&self) -> Vec3A {
         self.entity.pos

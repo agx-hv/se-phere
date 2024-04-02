@@ -45,7 +45,7 @@ pub fn main() {
         vec3a(0.2, 0.1, 0.8),
         1.0,
     );
-    //cube.set_scale(2.0,2.0,2.0);
+    //cube.set_scale(10.0,10.0,10.0);
 
     let mut ground = Entity::new(
         "assets/mesh/ground.stl",
@@ -54,6 +54,7 @@ pub fn main() {
         0.0,
     );
 
+    /*
     for vertex in &ground.mesh.vertices {
         let mut marker = Entity::new(
             "assets/mesh/cube.stl",
@@ -61,9 +62,10 @@ pub fn main() {
             vec3a(0.8, 0.2, 0.8),
             0.0,
             );
-        //marker.set_scale(0.2,0.2,0.2);
-        //ground_vertex_markers.push(marker);
+        marker.set_scale(0.2,0.2,0.2);
+        ground_vertex_markers.push(marker);
     }
+    */
 
     let mut rt_marker = Entity::new(
         "assets/mesh/cube.stl",
@@ -117,7 +119,7 @@ pub fn main() {
             // ground mesh selection / mouse tracking using rt_marker
             let (x, y) = window.get_cursor_pos();
 
-            let mut i = 0 as usize;
+            let i: usize;
 
             if keystates[10] == 1 || keystates [11] == 1 {
                 let p = player.camera.proj_mat();
@@ -140,7 +142,7 @@ pub fn main() {
                 let mut rew = pvi*re;
                 rew /= rew[3];
                 let eye = player.camera.eye();
-                let mut raydir: Vec3A = (rew-rsw).normalize().into();
+                let raydir: Vec3A = (rew-rsw).normalize().into();
 
                 if raydir.dot(vec3a(0.0,1.0,0.0)) < 0.0 {
                     rt_marker.pos = eye - raydir*eye.y/raydir.y;
@@ -259,8 +261,8 @@ fn handle_window_event(glfw: &mut glfw::Glfw, window: &mut glfw::Window, event: 
         glfw::WindowEvent::MouseButton(mouse_button,action,modifier) =>{
             keys::handle_mouse_button(mouse_button,action,modifier,keystates);}
 
-        glfw::WindowEvent::Scroll(x,y )=>{
-                player.camera.radius += ZOOM_DELTA*y as f32;}
+        glfw::WindowEvent::Scroll(_x,y)=>{
+                player.camera.radius -= ZOOM_DELTA*y as f32;}
 
         _=>{}
     } 
