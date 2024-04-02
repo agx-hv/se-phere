@@ -15,10 +15,10 @@ pub struct PlayerCamera {
 }
 
 impl PlayerCamera{
-    pub fn new(player_pos:Vec3A,aspect:f32)-> Self {
+    pub fn new(player_pos: Vec3A, aspect: f32, camera_angle: f32)-> Self {
         PlayerCamera{
             player_pos,
-            camera_angle: 0.0,
+            camera_angle,
             tilt: 0.6,
             radius: 2.0,
             fov: PI/3.0,

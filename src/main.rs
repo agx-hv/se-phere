@@ -2,6 +2,7 @@ extern crate glfw;
 extern crate gl;
 extern crate glam;
 extern crate num_traits;
+extern crate rand;
 use glam::{vec3a, vec4};
 use glam::Vec3Swizzles;
 use glam::f32:: Vec3A;
@@ -15,7 +16,8 @@ pub mod meshloader;
 pub mod entities; 
 use entities::*;
 pub mod keys;
-use std::{thread, time};
+use std::{thread, time, f32::consts::PI};
+use rand::*;
 
 const DELTA_TIME: time::Duration = time::Duration::from_millis(16);
 
@@ -25,28 +27,33 @@ const CAMERA_DELTA: f32 = 0.02;
 const PAN_TRESHOLD_RATIO:f64=0.1; //how close to the edge before panning
 const TILT_TRESHOLD_RATIO:f64=0.1; //how close to the edge before tilting
 const ZOOM_DELTA:f32 = 0.1;
+const GROUND_IMMUTABLE_RADIUS: f32 = 0.5;
+const PLAYER_SPAWN_RADIUS: f32 = 10.0;
 
 pub fn main() {
     let mut scr_w = 1920i32;
     let mut scr_h = 1080i32;
     
+    let mut rng = thread_rng();
 
+    let theta = rng.gen_range(0.0..2.0*PI);
+    let player_init_pos = vec3a(PLAYER_SPAWN_RADIUS*f32::cos(theta), 0.1, PLAYER_SPAWN_RADIUS*f32::sin(theta));
     // initializing entities as Entity
     let mut player = Player::new(
         "assets/mesh/small_sphere.stl",
-        vec3a(0.1, 0.1, 0.3),
+        player_init_pos,
         vec3a(0.1, 0.5, 0.2),
-        camera::PlayerCamera::new(vec3a(0.0, 1.0, 3.0),scr_w as f32/scr_h as f32),
+        camera::PlayerCamera::new(player_init_pos, scr_w as f32/scr_h as f32, f32::atan2(player_init_pos.x, player_init_pos.z)),
         1.0,
     );
 
     let mut cube = Entity::new(
         "assets/mesh/cube.stl",
-        ORIGIN,
+        ORIGIN + vec3a(0.0,0.2,0.0),
         vec3a(0.2, 0.1, 0.8),
         1.0,
     );
-    //cube.set_scale(10.0,10.0,10.0);
+    cube.set_scale(2.0,2.0,2.0);
 
     let mut ground = Entity::new(
         "assets/mesh/ground.stl",
@@ -149,19 +156,25 @@ pub fn main() {
             let eye = player.camera.eye();
             let raydir: Vec3A = (rew-rsw).normalize().into();
 
-            if raydir.dot(vec3a(0.0,1.0,0.0)) < 0.0 || true {
+            if raydir.dot(vec3a(0.0,1.0,0.0)) < 0.0 {
                 i = ground.closest_vertex_index(rt_marker.pos.xz());
                 let ground_y = ground.mesh.vertices[i].y;
                 rt_marker.pos = eye - raydir*(eye.y-ground_y)/raydir.y;
-                //rt_marker.pos.y += ground_y;
+                if rt_marker.pos.xz().distance(ORIGIN.xz()) < GROUND_IMMUTABLE_RADIUS {
+                    window.set_cursor(Some(Cursor::standard(Arrow)));
+                } else {
+                    window.set_cursor(Some(Cursor::standard(VResize)));
+                }
             }
 
             if keystates[10] == 1 || keystates [11] == 1 {
-                if keystates[10] == 1 && keystates[11] == 0 {
-                    ground.mesh.mutate(i, vec3a(0.0,1.0,0.0), player.ability.ground_mut_power);
-                }
-                if keystates[10] == 0 && keystates[11] == 1 {
-                    ground.mesh.mutate(i, vec3a(0.0,-1.0,0.0), player.ability.ground_mut_power);
+                if rt_marker.pos.xz().distance(ORIGIN.xz()) >= GROUND_IMMUTABLE_RADIUS {
+                    if keystates[10] == 1 && keystates[11] == 0 {
+                        ground.mesh.mutate(i, vec3a(0.0,1.0,0.0), player.ability.ground_mut_power);
+                    }
+                    if keystates[10] == 0 && keystates[11] == 1 {
+                        ground.mesh.mutate(i, vec3a(0.0,-1.0,0.0), player.ability.ground_mut_power);
+                    }
                 }
             }
 
@@ -194,7 +207,9 @@ pub fn main() {
             }
             */
 
-            if player.detect_col(&cube).0 {player.collide(&cube)};
+            if player.detect_col(&cube).0 {
+                break;
+            }
             cube.draw(&mut player.camera, &lighting_program);
 
             //rt_marker.draw(&mut player.camera, &lighting_program);
@@ -238,7 +253,7 @@ pub fn main() {
 
 
             thread::sleep(DELTA_TIME);
-            //dbg!(player.pos);
+            //dbg!(player.entity.pos);
         }
 
 
