@@ -232,7 +232,7 @@ pub fn main() {
             player.on_ground = true;
         };
 
-        if player.detect_col(&cube).0 {
+        if player.detect_col(&cube).0 || player.entity.pos.y < -5.0 {
             let theta = rng.gen_range(0.0..2.0*PI);
             let player_init_pos = vec3a(PLAYER_SPAWN_RADIUS*f32::cos(theta), 0.5, PLAYER_SPAWN_RADIUS*f32::sin(theta));
             let player_init_cam = camera::PlayerCamera::update(player_init_pos, scr_w as f32/scr_h as f32, 
