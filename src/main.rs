@@ -104,11 +104,12 @@ pub fn main() {
     window.make_current();
     gl::load_with(|f_name| window.get_proc_address(f_name));
 
+    let lighting_program: ShaderProgram;
+
     unsafe {
         gl::Enable(gl::DEPTH_TEST);
         gl::ClearColor(0.2, 0.3, 0.3, 1.0);
-
-        let lighting_program = ShaderProgram::new("src/shaders/lighting.vs", "src/shaders/lighting.fs");
+        lighting_program = ShaderProgram::new("src/shaders/lighting.vs", "src/shaders/lighting.fs");
 
         lighting_program.set_vec3f(b"lightColor\0", 2.0, 2.0, 2.0);
         lighting_program.set_vec3f(b"lightPos\0", 10.0, 25.0, 10.0);
@@ -119,76 +120,82 @@ pub fn main() {
         rt_marker.gl_init();
 
         /* initialize ground vertex marker cubes
-        for marker in &mut ground_vertex_markers {
-            marker.gl_init();
+           for marker in &mut ground_vertex_markers {
+           marker.gl_init();
+           }
+       */
+    }
+
+
+    while !window.should_close() {
+
+        glfw.poll_events();
+        window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
+        for (_, event) in glfw::flush_messages(&events) {
+            handle_window_event(&mut glfw, &mut window, event, &mut player, &mut keystates);
         }
-        */
 
-        while !window.should_close() {
+        (scr_w, scr_h) = window.get_size();
+        player.camera.aspect = scr_w as f32 / scr_h as f32;
 
-            (scr_w, scr_h) = window.get_size();
-            player.camera.aspect = scr_w as f32 / scr_h as f32;
-            gl::Viewport(0,0,scr_w,scr_h);
+        unsafe{ gl::Viewport(0,0,scr_w,scr_h) }
 
-            // ground mesh selection / mouse tracking using rt_marker
-            let (x, y) = window.get_cursor_pos();
+        // ground mesh selection / mouse tracking using rt_marker
+        let (x, y) = window.get_cursor_pos();
 
-            let mut i: usize = 0;
+        let mut i: usize = 0;
 
-            let p = player.camera.proj_mat();
-            let v = player.camera.view_mat();
-            let pvi = (p*v).inverse();
-            let ndc_x = (x as f32/scr_w as f32 - 0.5) * 2.0;
-            let ndc_y = (y as f32/scr_h as f32 - 0.5) * -2.0;
-            let rs = vec4(
-                ndc_x,
-                ndc_y,
-                -1.0, 
-                1.0);
-            let re = vec4(
-                ndc_x,
-                ndc_y,
-                0.0, 
-                1.0);
-            let mut rsw = pvi*rs;
-            rsw /= rsw[3];
-            let mut rew = pvi*re;
-            rew /= rew[3];
-            let eye = player.camera.eye();
-            let raydir: Vec3A = (rew-rsw).normalize().into();
+        let p = player.camera.proj_mat();
+        let v = player.camera.view_mat();
+        let pvi = (p*v).inverse();
+        let ndc_x = (x as f32/scr_w as f32 - 0.5) * 2.0;
+        let ndc_y = (y as f32/scr_h as f32 - 0.5) * -2.0;
+        let rs = vec4(
+            ndc_x,
+            ndc_y,
+            -1.0, 
+            1.0);
+        let re = vec4(
+            ndc_x,
+            ndc_y,
+            0.0, 
+            1.0);
+        let mut rsw = pvi*rs;
+        rsw /= rsw[3];
+        let mut rew = pvi*re;
+        rew /= rew[3];
+        let eye = player.camera.eye();
+        let raydir: Vec3A = (rew-rsw).normalize().into();
 
-            if raydir.dot(vec3a(0.0,1.0,0.0)) < 0.0 {
-                i = ground.closest_vertex_index(rt_marker.pos.xz());
-                let ground_y = ground.mesh.vertices[i].y;
-                rt_marker.pos = eye - raydir*(eye.y-ground_y)/raydir.y;
-                if rt_marker.pos.xz().distance(ORIGIN.xz()) < GROUND_IMMUTABLE_RADIUS {
-                    window.set_cursor(Some(Cursor::standard(Arrow)));
-                } else {
-                    window.set_cursor(Some(Cursor::standard(VResize)));
+        if raydir.dot(vec3a(0.0,1.0,0.0)) < 0.0 {
+            i = ground.closest_vertex_index(rt_marker.pos.xz());
+            let ground_y = ground.mesh.vertices[i].y;
+            rt_marker.pos = eye - raydir*(eye.y-ground_y)/raydir.y;
+            if rt_marker.pos.xz().distance(ORIGIN.xz()) < GROUND_IMMUTABLE_RADIUS {
+                window.set_cursor(Some(Cursor::standard(Arrow)));
+            } else {
+                window.set_cursor(Some(Cursor::standard(VResize)));
+            }
+        }
+
+        if keystates[10] == 1 || keystates [11] == 1 {
+            if rt_marker.pos.xz().distance(ORIGIN.xz()) >= GROUND_IMMUTABLE_RADIUS {
+                if keystates[10] == 1 && keystates[11] == 0 {
+                    ground.mesh.mutate(i, vec3a(0.0,1.0,0.0), player.ability.ground_mut_power);
+                }
+                if keystates[10] == 0 && keystates[11] == 1 {
+                    ground.mesh.mutate(i, vec3a(0.0,-1.0,0.0), player.ability.ground_mut_power);
                 }
             }
-            
-            // handle ground deform with mouse clicks
-            if keystates[10] == 1 || keystates [11] == 1 {
-                if rt_marker.pos.xz().distance(ORIGIN.xz()) >= GROUND_IMMUTABLE_RADIUS {
-                    if keystates[10] == 1 && keystates[11] == 0 {
-                        ground.mesh.mutate(i, vec3a(0.0,1.0,0.0), player.ability.ground_mut_power);
-                    }
-                    if keystates[10] == 0 && keystates[11] == 1 {
-                        ground.mesh.mutate(i, vec3a(0.0,-1.0,0.0), player.ability.ground_mut_power);
-                    }
-                }
-            }
+        }
+
+
+        unsafe {
 
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-
             player.entity.draw(&mut player.camera, &lighting_program);
 
-            if player.detect_col(&ground).0 {
-                player.collide(&ground);
-                player.on_ground = true;
-            };
             ground.draw(&mut player.camera, &lighting_program);
 
             /* Debug raycasting using ground vertex markers 
@@ -221,51 +228,52 @@ pub fn main() {
             cube.draw(&mut player.camera, &lighting_program);
 
             //rt_marker.draw(&mut player.camera, &lighting_program);
-
-
-            glfw.poll_events();
-            window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
-            for (_, event) in glfw::flush_messages(&events) {
-                handle_window_event(&mut glfw, &mut window, event, &mut player,&mut keystates);
-            }
-            window.swap_buffers();
-            
-            // player loop
-            player.mv(vec3a(
+        }
+        
+        // player loop
+        player.mv(vec3a(
                 (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*f32::sin(player.camera.camera_angle), 0.0, // use camera angle as direction
                 (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*f32::cos(player.camera.camera_angle))); // for the player to move towards
-            player.mvhelper(); 
-            
-            // player.camera loop
-            player.camera.player_pos=player.pos();
-            player.camera.camera_angle += (if f32::abs(player.vec.x) > 0.0001 || f32::abs(player.vec.z) > 0.0001 {1}
-                // allows spin only if player vec is > 0
-                else {0}) as f32 * CAMERA_DELTA * (keystates[1]-keystates[3]) as f32; // ks[1]-ks[3] as a & d keys - left/right
-            player.camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[5]) as f32; // ks[4]-ks[5] as i & k keys - pan up/pan down
+        player.mvhelper(); 
 
+        if player.detect_col(&ground).0 {
+            player.collide(&ground);
+            player.on_ground = true;
+        };
 
-            // //mouse control
-            if x < scr_w as f64 * PAN_TRESHOLD_RATIO{
-                player.camera.camera_angle += CAMERA_DELTA;
-            }
-            else if x > scr_w as f64 * (1.0-PAN_TRESHOLD_RATIO){
-                player.camera.camera_angle -= CAMERA_DELTA;
-            }
-
-            if y < scr_h as f64 * TILT_TRESHOLD_RATIO{
-                player.camera.tilt -= CAMERA_DELTA;
-            }
-            else if y > scr_h as f64 * (1.0-TILT_TRESHOLD_RATIO){
-                player.camera.tilt += CAMERA_DELTA;
-            }
-
-
-            thread::sleep(DELTA_TIME);
-            //dbg!(player.entity.pos);
+        if player.detect_col(&cube).0 {
+            break;
         }
 
+        // player.camera loop
+        player.camera.player_pos=player.pos();
+        player.camera.camera_angle += (if f32::abs(player.vec.x) > 0.0001 || f32::abs(player.vec.z) > 0.0001 {1}
+            // allows spin only if player vec is > 0
+            else {0}) as f32 * CAMERA_DELTA * (keystates[1]-keystates[3]) as f32; // ks[1]-ks[3] as a & d keys - left/right
+        player.camera.tilt+= CAMERA_DELTA*(keystates[4]-keystates[5]) as f32; // ks[4]-ks[5] as i & k keys - pan up/pan down
 
+
+        // //mouse control
+        if x < scr_w as f64 * PAN_TRESHOLD_RATIO{
+            player.camera.camera_angle += CAMERA_DELTA;
+        }
+        else if x > scr_w as f64 * (1.0-PAN_TRESHOLD_RATIO){
+            player.camera.camera_angle -= CAMERA_DELTA;
+        }
+
+        if y < scr_h as f64 * TILT_TRESHOLD_RATIO{
+            player.camera.tilt -= CAMERA_DELTA;
+        }
+        else if y > scr_h as f64 * (1.0-TILT_TRESHOLD_RATIO){
+            player.camera.tilt += CAMERA_DELTA;
+        }
+
+        window.swap_buffers();
+        thread::sleep(DELTA_TIME);
+        //dbg!(player.on_ground);
     }
+
+
 }
 
 
@@ -291,7 +299,7 @@ fn handle_window_event(glfw: &mut glfw::Glfw, window: &mut glfw::Window, event: 
         glfw::WindowEvent::Key(glfw::Key::Space, _, glfw::Action::Press, _) => {
             if player.on_ground {
                 player.on_ground = false;
-                player.vec[1] += 0.1;
+                player.vec.y += 0.1;
             }
         }
         glfw::WindowEvent::Key(key,_,action,modifier) =>{
