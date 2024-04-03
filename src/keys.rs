@@ -20,9 +20,9 @@ pub fn handle_key_event(window: &mut glfw::Window, key: Key, action: Action, _mo
     }
 }
 pub fn handle_mouse_button(mouse_button: MouseButton, action: Action, _modifier: Modifiers, keystates: &mut [i8; 16]) {
-    let index = match mouse_button { //modular mapping system
-        MouseButton::Button1 => 10, // leftclick, mesh shit go down
-        MouseButton::Button2 => 11, // rightclick,mesh shit go up
+    let index = match mouse_button {
+        MouseButton::Button1 => 10, // left click, mesh go up
+        MouseButton::Button2 => 11, // right click, mesh go down
         _ => 999 //everything else
     };
     if index != 999 {

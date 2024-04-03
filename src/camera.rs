@@ -28,6 +28,19 @@ impl PlayerCamera{
         }
     }
 
+    pub fn update(player_pos: Vec3A, aspect: f32, camera_angle: f32, old_cam: PlayerCamera)-> Self {
+        PlayerCamera{
+            player_pos,
+            camera_angle,
+            tilt: old_cam.tilt,
+            radius: old_cam.radius,
+            fov: old_cam.fov,
+            aspect,
+            near: old_cam.near,
+            far: old_cam.far,
+        }
+    }
+
     pub fn view_mat(&mut self) -> Mat4 {
         if self.radius<0.1{
             self.radius = 0.1

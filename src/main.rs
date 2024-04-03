@@ -38,12 +38,13 @@ pub fn main() {
 
     let theta = rng.gen_range(0.0..2.0*PI);
     let player_init_pos = vec3a(PLAYER_SPAWN_RADIUS*f32::cos(theta), 0.1, PLAYER_SPAWN_RADIUS*f32::sin(theta));
+    let player_init_cam = camera::PlayerCamera::new(player_init_pos, scr_w as f32/scr_h as f32, f32::atan2(player_init_pos.x, player_init_pos.z));
     // initializing entities as Entity
     let mut player = Player::new(
         "assets/mesh/small_sphere.stl",
         player_init_pos,
         vec3a(0.1, 0.5, 0.2),
-        camera::PlayerCamera::new(player_init_pos, scr_w as f32/scr_h as f32, f32::atan2(player_init_pos.x, player_init_pos.z)),
+        player_init_cam,
         1.0,
     );
 
@@ -166,7 +167,8 @@ pub fn main() {
                     window.set_cursor(Some(Cursor::standard(VResize)));
                 }
             }
-
+            
+            // handle ground deform with mouse clicks
             if keystates[10] == 1 || keystates [11] == 1 {
                 if rt_marker.pos.xz().distance(ORIGIN.xz()) >= GROUND_IMMUTABLE_RADIUS {
                     if keystates[10] == 1 && keystates[11] == 0 {
@@ -208,7 +210,13 @@ pub fn main() {
             */
 
             if player.detect_col(&cube).0 {
-                break;
+                let theta = rng.gen_range(0.0..2.0*PI);
+                let player_init_pos = vec3a(PLAYER_SPAWN_RADIUS*f32::cos(theta), 0.5, PLAYER_SPAWN_RADIUS*f32::sin(theta));
+                let player_init_cam = camera::PlayerCamera::update(player_init_pos, scr_w as f32/scr_h as f32, 
+                    f32::atan2(player_init_pos.x, player_init_pos.z),player.camera);
+                player.entity.set_pos(player_init_pos);
+                player.camera = player_init_cam;
+                player.vec = vec3a(0.0,0.0,0.0);
             }
             cube.draw(&mut player.camera, &lighting_program);
 

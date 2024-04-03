@@ -123,6 +123,9 @@ impl Entity {
             scale,
         }
     }
+    pub fn set_pos(&mut self, new_pos:Vec3A){
+        self.pos = new_pos
+    }
     pub fn set_scale(&mut self, x: f32, y: f32, z: f32) {
         self.scale = vec3a(x,y,z);
         let m = Mesh::new(&self.mesh.path as &str , self.scale);
