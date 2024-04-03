@@ -215,16 +215,7 @@ pub fn main() {
                 j += 1;
             }
             */
-
-            if player.detect_col(&cube).0 {
-                let theta = rng.gen_range(0.0..2.0*PI);
-                let player_init_pos = vec3a(PLAYER_SPAWN_RADIUS*f32::cos(theta), 0.5, PLAYER_SPAWN_RADIUS*f32::sin(theta));
-                let player_init_cam = camera::PlayerCamera::update(player_init_pos, scr_w as f32/scr_h as f32, 
-                    f32::atan2(player_init_pos.x, player_init_pos.z),player.camera);
-                player.entity.set_pos(player_init_pos);
-                player.camera = player_init_cam;
-                player.vec = vec3a(0.0,0.0,0.0);
-            }
+            
             cube.draw(&mut player.camera, &lighting_program);
 
             //rt_marker.draw(&mut player.camera, &lighting_program);
@@ -242,7 +233,13 @@ pub fn main() {
         };
 
         if player.detect_col(&cube).0 {
-            break;
+            let theta = rng.gen_range(0.0..2.0*PI);
+            let player_init_pos = vec3a(PLAYER_SPAWN_RADIUS*f32::cos(theta), 0.5, PLAYER_SPAWN_RADIUS*f32::sin(theta));
+            let player_init_cam = camera::PlayerCamera::update(player_init_pos, scr_w as f32/scr_h as f32, 
+                f32::atan2(player_init_pos.x, player_init_pos.z),player.camera);
+            player.entity.set_pos(player_init_pos);
+            player.camera = player_init_cam;
+            player.vec = vec3a(0.0,0.0,0.0);
         }
 
         // player.camera loop
