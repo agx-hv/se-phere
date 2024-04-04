@@ -22,17 +22,21 @@ use rand::*;
 const DELTA_TIME: time::Duration = time::Duration::from_millis(16);
 
 const ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0);
-const MOVEMENT_DELTA: f32 = 0.003;
-const CAMERA_DELTA: f32 = 0.02;
+const MOVEMENT_DELTA: f32 = 0.006;
+const CAMERA_DELTA: f32 = 0.03;
 const PAN_TRESHOLD_RATIO:f64=0.1; //how close to the edge before panning
 const TILT_TRESHOLD_RATIO:f64=0.1; //how close to the edge before tilting
 const ZOOM_DELTA:f32 = 0.1;
 const GROUND_IMMUTABLE_RADIUS: f32 = 0.5;
 const PLAYER_SPAWN_RADIUS: f32 = 10.0;
+const CUBE_SPAWN_RADIUS: f32 = 5.0;
+const CUBE_RESPAWN_TIME: u64 = 60;
 
 pub fn main() {
     let mut scr_w = 1920i32;
     let mut scr_h = 1080i32;
+    let mut framenum = 0u64;
+    let mut cube_respawn_frame = 0u64;
     
     let mut rng = thread_rng();
 
@@ -51,15 +55,27 @@ pub fn main() {
     let mut cube = Entity::new(
         "assets/mesh/cube.stl",
         ORIGIN + vec3a(0.0,0.2,0.0),
-        vec3a(0.2, 0.1, 0.8),
+        vec3a(0.2, 0.2, 0.2),
         1.0,
     );
     cube.set_scale(2.0,2.0,2.0);
 
+    let theta2 = rng.gen_range(0.0..2.0*PI);
+    let cube_r = rng.gen_range(2.0..=CUBE_SPAWN_RADIUS);
+    let cube_pos = vec3a(cube_r*f32::cos(theta2), -0.5, cube_r*f32::sin(theta2));
+
+    let mut cube2 = Entity::new(
+        "assets/mesh/mickey.stl",
+        cube_pos,
+        vec3a(0.8, 0.1, 0.8),
+        1.0,
+    );
+    cube2.set_scale(0.7,0.7,0.7);
+
     let mut ground = Entity::new(
         "assets/mesh/ground.stl",
         ORIGIN,
-        vec3a(0.4, 0.2, 0.1),
+        0.6*vec3a(0.47, 0.41, 0.34),
         0.0,
     );
 
@@ -116,6 +132,7 @@ pub fn main() {
 
         player.entity.gl_init();
         cube.gl_init();
+        cube2.gl_init();
         ground.gl_init();
         rt_marker.gl_init();
 
@@ -217,6 +234,7 @@ pub fn main() {
             */
             
             cube.draw(&mut player.camera, &lighting_program);
+            cube2.draw(&mut player.camera, &lighting_program);
 
             //rt_marker.draw(&mut player.camera, &lighting_program);
         }
@@ -231,6 +249,19 @@ pub fn main() {
             player.collide(&ground);
             player.on_ground = true;
         };
+        if player.detect_col(&cube2).0 {
+            player.collide(&cube2);
+            cube_respawn_frame = framenum + CUBE_RESPAWN_TIME;
+        };
+        if framenum == cube_respawn_frame {
+            let theta2 = rng.gen_range(0.0..2.0*PI);
+            let cube_r = rng.gen_range(2.0..=CUBE_SPAWN_RADIUS);
+            cube2.pos = vec3a(cube_r*f32::cos(theta2), -0.05, cube_r*f32::sin(theta2));
+            let R = rng.gen_range(0.0..1.0);
+            let G = rng.gen_range(0.0..1.0);
+            let B = rng.gen_range(0.0..1.0);
+            cube2.color = vec3a(R,G,B);
+        }
 
         if player.detect_col(&cube).0 || player.entity.pos.y < -5.0 {
             let theta = rng.gen_range(0.0..2.0*PI);
@@ -267,6 +298,7 @@ pub fn main() {
 
         window.swap_buffers();
         thread::sleep(DELTA_TIME);
+        framenum += 1;
         //dbg!(player.on_ground);
     }
 
