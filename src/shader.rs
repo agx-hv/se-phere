@@ -101,4 +101,12 @@ impl ShaderProgram {
             v2,
         );
     }
+    pub unsafe fn set_vec3fv(&self, loc: &[u8], count: usize, value: *const GLfloat) {
+        let loc = gl::GetUniformLocation(self.program, loc.as_ptr() as *const i8);
+        gl::Uniform3fv(
+            loc,
+            count as GLsizei,
+            value,
+        );
+    }
 }

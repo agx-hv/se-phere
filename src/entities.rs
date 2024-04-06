@@ -24,6 +24,7 @@ pub struct Entity {
     pub vao: u32,
     pub vbo: u32,
     pub color: Vec3A,
+    pub reflectance: f32,
     pub bounce: f32,
     pub scale: Vec3A,
 }
@@ -124,6 +125,7 @@ impl Entity {
             vao: 0,
             vbo: 0,
             color,
+            reflectance: 1.0,
             bounce,
             scale,
         }
@@ -181,7 +183,8 @@ impl Entity {
         lighting_program.set_mat4f(b"proj\0",&camera.proj_mat().to_cols_array()[0]);
         lighting_program.set_mat4f(b"view\0",&camera.view_mat().to_cols_array()[0]);
         lighting_program.set_mat4f(b"model\0",&t_mat.to_cols_array()[0]);
-        lighting_program.set_vec3f(b"objectColor\0", self.color[0], self.color[1], self.color[2]);
+        let objectColor = self.color * self.reflectance;
+        lighting_program.set_vec3f(b"objectColor\0", objectColor[0], objectColor[1], objectColor[2]);
 
         gl::BindVertexArray(self.vao);
         gl::DrawArrays(gl::TRIANGLES, 0, self.mesh.vertices_normals.len() as i32);

@@ -31,6 +31,7 @@ const GROUND_IMMUTABLE_RADIUS: f32 = 0.5;
 const PLAYER_SPAWN_RADIUS: f32 = 10.0;
 const CUBE_SPAWN_RADIUS: f32 = 5.0;
 const CUBE_RESPAWN_TIME: u64 = 60;
+const MAX_LIGHTS: usize = 16;
 
 pub fn main() {
     let mut scr_w = 1920i32;
@@ -45,17 +46,17 @@ pub fn main() {
     let player_init_cam = camera::PlayerCamera::new(player_init_pos, scr_w as f32/scr_h as f32, f32::atan2(player_init_pos.x, player_init_pos.z));
     // initializing entities as Entity
     let mut player = Player::new(
-        "assets/mesh/small_sphere.stl",
+        "assets/mesh/sephere.stl",
         player_init_pos,
-        vec3a(0.1, 0.5, 0.2),
+        1.0*vec3a(0.1, 0.5, 0.2),
         player_init_cam,
         1.0,
     );
 
     let mut cube = Entity::new(
-        "assets/mesh/cube.stl",
-        ORIGIN + vec3a(0.0,0.2,0.0),
-        vec3a(0.2, 0.2, 0.2),
+        "assets/mesh/rt_marker.stl",
+        ORIGIN + vec3a(0.0,0.0,0.0),
+        1.0*vec3a(0.2, 0.2, 0.2),
         1.0,
     );
     cube.set_scale(2.0,2.0,2.0);
@@ -71,11 +72,12 @@ pub fn main() {
         1.0,
     );
     cube2.set_scale(0.7,0.7,0.7);
+    cube2.reflectance = 0.4;
 
     let mut ground = Entity::new(
         "assets/mesh/ground.stl",
         ORIGIN,
-        0.6*vec3a(0.47, 0.41, 0.34),
+        0.8*vec3a(0.47, 0.41, 0.34),
         0.0,
     );
 
@@ -122,13 +124,30 @@ pub fn main() {
 
     let lighting_program: ShaderProgram;
 
+    // lighting 
+    let mut light_colors: [f32; MAX_LIGHTS*3] = [0.0; MAX_LIGHTS*3];
+    let mut light_positions: [f32; MAX_LIGHTS*3] = [0.0; MAX_LIGHTS*3];
+
+    let light_dist = 100f32;
+
+    for i in 0..MAX_LIGHTS {
+        let theta: f32 = 2.0*PI/(MAX_LIGHTS as f32) * (i as f32);
+        let (x,y,z) = (light_dist*f32::cos(theta), 50.0, light_dist*f32::sin(theta));
+        light_positions[3*i] = x;
+        light_positions[3*i+1] = y;
+        light_positions[3*i+2] = z;
+        light_colors[3*i] = 4.0/(MAX_LIGHTS as f32);
+        light_colors[3*i+1] = 4.0/(MAX_LIGHTS as f32);        
+        light_colors[3*i+2] = 4.0/(MAX_LIGHTS as f32);        
+    }
+
     unsafe {
         gl::Enable(gl::DEPTH_TEST);
         gl::ClearColor(0.2, 0.3, 0.3, 1.0);
         lighting_program = ShaderProgram::new("src/shaders/lighting.vs", "src/shaders/lighting.fs");
 
-        lighting_program.set_vec3f(b"lightColor\0", 2.0, 2.0, 2.0);
-        lighting_program.set_vec3f(b"lightPos\0", 10.0, 25.0, 10.0);
+        lighting_program.set_vec3fv(b"lightColor\0", MAX_LIGHTS, &light_colors[0]);
+        lighting_program.set_vec3fv(b"lightPos\0", MAX_LIGHTS, &light_positions[0]);
 
         player.entity.gl_init();
         cube.gl_init();
