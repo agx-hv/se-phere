@@ -1,8 +1,4 @@
-extern crate glfw;
-extern crate gl;
-extern crate glam;
-extern crate num_traits;
-extern crate rand;
+//#![allow(non_snake_case)]
 use glam::{vec3a, vec4};
 use glam::Vec3Swizzles;
 use glam::f32:: Vec3A;
@@ -16,8 +12,12 @@ pub mod meshloader;
 pub mod entities; 
 use entities::*;
 pub mod keys;
-use std::{thread, time, f32::consts::PI};
+use std::{str, thread, time, f32::consts::PI};
 use rand::*;
+
+// net, tokio
+use std::net::{Ipv4Addr,  SocketAddrV4};
+use tokio::net::UdpSocket;
 
 const DELTA_TIME: time::Duration = time::Duration::from_millis(16);
 
@@ -32,8 +32,16 @@ const PLAYER_SPAWN_RADIUS: f32 = 10.0;
 const CUBE_SPAWN_RADIUS: f32 = 5.0;
 const CUBE_RESPAWN_TIME: u64 = 60;
 const MAX_LIGHTS: usize = 16;
+const SERVER_IP_ADDR: Ipv4Addr = Ipv4Addr::new(127,0,0,1);
+const SERVER_PORT: u16 = 42069;
+const SERVER_SOCKET: SocketAddrV4 = SocketAddrV4::new(SERVER_IP_ADDR, SERVER_PORT);
 
-pub fn main() {
+#[tokio::main]
+async fn main() -> tokio::io::Result<()> {
+    // Create UDP socket
+    let socket = UdpSocket::bind(SERVER_IP_ADDR.to_string()+":0").await?;
+    socket.connect(SERVER_SOCKET).await?;
+
     let mut scr_w = 1920i32;
     let mut scr_h = 1080i32;
     let mut framenum = 0u64;
@@ -164,7 +172,6 @@ pub fn main() {
 
 
     while !window.should_close() {
-
         glfw.poll_events();
         window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
         for (_, event) in glfw::flush_messages(&events) {
@@ -315,12 +322,25 @@ pub fn main() {
             player.camera.tilt += CAMERA_DELTA;
         }
 
+
+        // socket
+        
+
+        let s = format!("POS: {:?}", &player.pos()); 
+        socket.send(s.as_bytes()).await?;
+
+        let mut buf = vec![0; 1024];
+        let (size, _peer) = socket.recv_from(&mut buf).await?;
+        let s = str::from_utf8(&buf[..size]).unwrap();
+        println!("Reply from server: {}",s);
+
         window.swap_buffers();
         thread::sleep(DELTA_TIME);
         framenum += 1;
         //dbg!(player.on_ground);
     }
 
+    Ok(())
 
 }
 

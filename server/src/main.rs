@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::net::SocketAddr;
-use std::{env, io};
+use std::{env, io, str};
 use tokio::net::UdpSocket;
 
 struct Server {
@@ -24,7 +24,9 @@ impl Server {
             if let Some((size, peer)) = to_send {
                 let amt = socket.send_to(&buf[..size], &peer).await?;
 
-                println!("Echoed {}/{} bytes to {}", amt, size, peer);
+                let s = str::from_utf8(&buf[..size]).unwrap();
+                println!("Received from client, echoing: {}",s);
+                //println!("Echoed {}/{} bytes to {}", amt, size, peer);
             }
 
             // If we're here then `to_send` is `None`, so we take a look for the
@@ -38,7 +40,7 @@ impl Server {
 async fn main() -> Result<(), Box<dyn Error>> {
     let addr = env::args()
         .nth(1)
-        .unwrap_or_else(|| "127.0.0.1:8080".to_string());
+        .unwrap_or_else(|| "127.0.0.1:42069".to_string());
 
     let socket = UdpSocket::bind(&addr).await?;
     println!("Listening on: {}", socket.local_addr()?);
