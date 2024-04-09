@@ -1,7 +1,19 @@
 use std::error::Error;
 use std::net::SocketAddr;
-use std::{env, io, str};
+use std::{env, io};
 use tokio::net::UdpSocket;
+use strum_macros::FromRepr;
+use glam::*;
+
+#[derive(FromRepr, Debug, PartialEq)]
+#[repr(u8)]
+enum Commands {
+    RESERVED,
+    STATE,
+    POS,
+    MUT,
+    PPOS,
+}
 
 struct Server {
     socket: UdpSocket,
@@ -22,10 +34,25 @@ impl Server {
             // If so then we try to send it back to the original source, waiting
             // until it's writable and we're able to do so.
             if let Some((size, peer)) = to_send {
-                let amt = socket.send_to(&buf[..size], &peer).await?;
+                let _amt = socket.send_to(b"ACK", &peer).await?;
 
-                let s = str::from_utf8(&buf[..size]).unwrap();
-                println!("Received from client, echoing: {}",s);
+                let b = &buf[..size];
+                let cmd = match b.get(0) {
+                    Some(i) => Commands::from_repr(*i),
+                    _ => None,
+                };
+                match cmd {
+                    Some(Commands::POS) => {
+                        match Self::vec3a_from_bytes(b.get(2..)) {
+                            Some(v) => {
+                                let pid = b[1];
+                                println!("Received from {}: {:?} {} {}", &peer, cmd.unwrap(), pid, v);
+                            }
+                            _ => println!("Invalid Vector from {}", &peer),
+                        }
+                    },
+                    _ => println!("Invalid Command from {}", &peer),
+                }
                 //println!("Echoed {}/{} bytes to {}", amt, size, peer);
             }
 
@@ -34,6 +61,18 @@ impl Server {
             to_send = Some(socket.recv_from(&mut buf).await?);
         }
     }
+    fn vec3a_from_bytes(byte_array: Option<&[u8]>) -> Option<Vec3A> {
+        match byte_array?.len() {
+            12 => {
+                let x = f32::from_be_bytes(byte_array?.get(..4)?.try_into().unwrap());
+                let y = f32::from_be_bytes(byte_array?.get(4..8)?.try_into().unwrap());
+                let z = f32::from_be_bytes(byte_array?.get(8..)?.try_into().unwrap());
+                Some(vec3a(x,y,z))
+            },
+            _ => None,
+        }
+    }
+
 }
 
 #[tokio::main]

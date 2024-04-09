@@ -27,7 +27,7 @@ const CAMERA_DELTA: f32 = 0.03;
 const PAN_TRESHOLD_RATIO:f64=0.01; //how close to the edge before panning
 const TILT_TRESHOLD_RATIO:f64=0.01; //how close to the edge before tilting
 const ZOOM_DELTA:f32 = 0.1;
-const GROUND_IMMUTABLE_RADIUS: f32 = 0.5;
+const GROUND_IMMUTABLE_RADIUS: f32 = 1.5;
 const PLAYER_SPAWN_RADIUS: f32 = 10.0;
 const CUBE_SPAWN_RADIUS: f32 = 5.0;
 const CUBE_RESPAWN_TIME: u64 = 60;
@@ -107,8 +107,8 @@ async fn main() -> tokio::io::Result<()> {
             ground.mesh.mutate(idx ,vec3a(0.0,-1.0,0.0),noise_1d[dr]);
         }
     }
-    */
 
+    */
     /* Add ground vertex marker cubes, uncomment to debug
     let mut ground_vertex_markers = vec!();
     for vertex in &ground.mesh.vertices {
@@ -342,10 +342,8 @@ async fn main() -> tokio::io::Result<()> {
 
 
         // socket
-        
-
-        let s = format!("POS: {:?}", &player.pos()); 
-        socket.send(s.as_bytes()).await?;
+        let p = player.pos_cmd();
+        socket.send(&p).await?;
 
         let mut buf = vec![0; 1024];
         let (size, _peer) = socket.recv_from(&mut buf).await?;

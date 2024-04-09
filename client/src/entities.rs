@@ -12,6 +12,7 @@ pub struct Player {
     pub radius: f32,
     pub on_ground: bool,
     pub ability: Ability,
+    pub player_id: u8,
 }
 
 pub struct Ability {
@@ -38,7 +39,8 @@ impl Player {
             camera,
             radius: 0.1,
             on_ground: false,
-            ability: Ability{ground_mut_power: 0.01},
+            ability: Ability{ground_mut_power: 0.05},
+            player_id: 0,
         }
     }
     pub fn mv(&mut self, t_vec: Vec3A) { // function to add velocity
@@ -111,6 +113,15 @@ impl Player {
 
         (false,vec3a(0.0,0.0,0.0),0.0)
 
+    }
+    pub fn pos_cmd(&self) -> [u8; 14] {
+        let mut result = vec!(0x02);
+        result.extend_from_slice(&[self.player_id]);
+        result.extend_from_slice(&self.pos().x.to_be_bytes());
+        result.extend_from_slice(&self.pos().y.to_be_bytes());
+        result.extend_from_slice(&self.pos().z.to_be_bytes());
+        //dbg!(&result);
+        result.as_slice().try_into().expect("Not 14 bytes long")
     }
 
 }
