@@ -172,7 +172,7 @@ pub fn main() {
         }
 
         (scr_w, scr_h) = window.get_size();
-        player.camera.aspect = scr_w as f32 / scr_h as f32;
+        player.camera.camera_bare.aspect = scr_w as f32 / scr_h as f32;
 
         unsafe{ gl::Viewport(0,0,scr_w,scr_h) }
 

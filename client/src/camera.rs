@@ -4,7 +4,7 @@ use glam::f32::{Mat4, Vec3A};
 use std::f32::consts::PI;
 
 
-struct CameraBare{
+pub struct CameraBare{
     pub fov: f32,
     pub aspect: f32,
     pub near: f32,
@@ -15,15 +15,6 @@ impl CameraBare{
     pub fn proj_mat(&mut self) -> Mat4 {
         Mat4::perspective_rh(self.fov.into(), self.aspect.into(), self.near.into(), self.far.into())
     }
-
-    pub fn update(aspect:f32,old_cam_bare:CameraBare)-> Self{
-        CameraBare{
-            fov: old_cam_bare.fov,
-            aspect,
-            near: old_cam_bare.near,
-            far: old_cam_bare.far,
-        }
-    }
 }
 
 
@@ -32,7 +23,7 @@ pub struct FPSCamera{
     pub eye: Vec3A,
     pub up: Vec3A,
     pub target: Vec3A,
-    pub camera_bare:CameraBare
+    pub camera_bare:CameraBare,
 }
 
 impl FPSCamera{
@@ -50,12 +41,17 @@ impl FPSCamera{
     }
 
     pub fn update(eye: Vec3A, up: Vec3A, target: Vec3A,aspect:f32, old_cam: FPSCamera)-> Self {
-        CameraBare::update(aspect,old_cam.camera_bare);
+
         FPSCamera{
             eye,
             up,
             target,
-            camera_bare:old_cam.camera_bare,
+            camera_bare:CameraBare{
+                fov:old_cam.camera_bare.fov,
+                aspect,
+                near:old_cam.camera_bare.near,
+                far:old_cam.camera_bare.far,
+            },
         }
     }
 
@@ -91,13 +87,17 @@ impl PlayerCamera{
     }
 
     pub fn update(player_pos: Vec3A, aspect: f32, camera_angle: f32, old_cam: PlayerCamera)-> Self {
-        CameraBare::update(aspect, old_cam.camera_bare);
         PlayerCamera{
             player_pos,
             camera_angle,
             tilt: old_cam.tilt,
             radius: old_cam.radius,
-            camera_bare: old_cam.camera_bare,
+            camera_bare:CameraBare{
+                fov:old_cam.camera_bare.fov,
+                aspect,
+                near:old_cam.camera_bare.near,
+                far:old_cam.camera_bare.far,
+            },
         }
 
     }
