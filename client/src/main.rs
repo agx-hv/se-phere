@@ -24,8 +24,8 @@ const DELTA_TIME: time::Duration = time::Duration::from_millis(16);
 const ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0);
 const MOVEMENT_DELTA: f32 = 0.006;
 const CAMERA_DELTA: f32 = 0.03;
-const PAN_TRESHOLD_RATIO:f64=0.1; //how close to the edge before panning
-const TILT_TRESHOLD_RATIO:f64=0.1; //how close to the edge before tilting
+const PAN_TRESHOLD_RATIO:f64=0.01; //how close to the edge before panning
+const TILT_TRESHOLD_RATIO:f64=0.01; //how close to the edge before tilting
 const ZOOM_DELTA:f32 = 0.1;
 const GROUND_IMMUTABLE_RADIUS: f32 = 0.5;
 const PLAYER_SPAWN_RADIUS: f32 = 10.0;
@@ -90,6 +90,24 @@ async fn main() -> tokio::io::Result<()> {
     );
 
     ground.set_scale(3.0,1.0,3.0);
+
+    // 1D noise test
+    /*
+    let mut noise_1d = [0.0;160]; 
+    for i in 0..160 {
+        noise_1d[i] = rng.gen_range(-0.05..0.05);
+    }
+
+    for dr in 30..160 {
+        let r = 0.1*(dr as f32);
+        for dtheta in 0..200 {
+            let theta = 2.0*PI/200.0*(dtheta as f32);
+            let xz = vec3a(r*f32::cos(theta), 0.0, r*f32::sin(theta)).xz();
+            let idx = ground.closest_vertex_index(xz);
+            ground.mesh.mutate(idx ,vec3a(0.0,-1.0,0.0),noise_1d[dr]);
+        }
+    }
+    */
 
     /* Add ground vertex marker cubes, uncomment to debug
     let mut ground_vertex_markers = vec!();
