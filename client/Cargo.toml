@@ -1,5 +1,5 @@
 [package]
-name = "se-phere"
+name = "client"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,3 +13,4 @@ num-traits = "0.2.18"
 rand = "0.8.5"
 stl_io = "0.7.0"
 tokio = { version = "1", features = ["full"] }
+messaging = {path = "../messaging"}

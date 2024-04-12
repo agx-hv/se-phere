@@ -1,7 +1,8 @@
-//#![allow(non_snake_case)]
+#![allow(non_snake_case)]
+#![allow(unused_variables)]
 use glam::{vec3a, vec4};
 use glam::Vec3Swizzles;
-use glam::f32:: Vec3A;
+use glam::f32::{Vec3,Vec3A};
 use glfw::Context;
 use glfw::Cursor;
 use glfw::StandardCursor::*;
@@ -15,12 +16,15 @@ pub mod keys;
 use std::{str, thread, time, f32::consts::PI};
 use rand::*;
 
-// net, tokio
-use std::net::{Ipv4Addr,  SocketAddrV4};
-use tokio::net::UdpSocket;
+// net, tokio, messaging
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use tokio::net::{UdpSocket, TcpStream, TcpListener};
+use tokio::io::ErrorKind;
+use messaging::{Message, Command, AsBytes};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicPtr, Ordering};
 
 const DELTA_TIME: time::Duration = time::Duration::from_millis(16);
-
 const ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0);
 const MOVEMENT_DELTA: f32 = 0.006;
 const CAMERA_DELTA: f32 = 0.03;
@@ -32,16 +36,53 @@ const PLAYER_SPAWN_RADIUS: f32 = 10.0;
 const CUBE_SPAWN_RADIUS: f32 = 5.0;
 const CUBE_RESPAWN_TIME: u64 = 60;
 const MAX_LIGHTS: usize = 16;
-const SERVER_IP_ADDR: Ipv4Addr = Ipv4Addr::new(127,0,0,1);
+const SERVER_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 const SERVER_PORT: u16 = 42069;
-const SERVER_SOCKET: SocketAddrV4 = SocketAddrV4::new(SERVER_IP_ADDR, SERVER_PORT);
+const SERVER_SOCKET: SocketAddr = SocketAddr::new(SERVER_IP_ADDR, SERVER_PORT);
 
 #[tokio::main]
 async fn main() -> tokio::io::Result<()> {
+    let counter = Arc::new(AtomicU64::new(0));
+    let oldmesh = Arc::new(AtomicBool::new(false));
     // Create UDP socket
     let socket = UdpSocket::bind(SERVER_IP_ADDR.to_string()+":0").await?;
     socket.connect(SERVER_SOCKET).await?;
 
+    let listener = TcpListener::bind(SERVER_IP_ADDR.to_string()+":42069").await?;
+    tokio::join!(
+        game(&socket, oldmesh.clone(), &listener),
+        listen(&socket, counter.clone(), oldmesh.clone())
+    );
+
+    Ok(())
+}
+
+async fn listen(socket: &UdpSocket, counter: Arc<AtomicU64>, oldmesh: Arc<AtomicBool>) -> tokio::io::Result<()> {
+    loop {
+        let mut buf = vec![0; 1024];
+        let (size, peer) = socket.recv_from(&mut buf).await?;
+        let m = Message::try_from_data(peer, &buf[..size]).unwrap();
+        match m.command {
+            Command::R_STATE => { 
+                let num_players = m.extract_u8(0).unwrap();
+                let num_mutations = m.extract_u64(1).unwrap();
+                if counter.load(Ordering::Relaxed) < num_mutations {
+                    counter.store(num_mutations,Ordering::Relaxed);
+                    oldmesh.store(true,Ordering::Relaxed);
+                }
+                println!("{:?}", counter);
+            },
+            Command::R_PPOS => {},
+            Command::R_GNDSTATE => { 
+                let blob_length = m.extract_u32(0).unwrap();
+                println!("About to receive {} bytes via tcp", blob_length);
+            },
+            _ => {dbg!(&m); },
+        }
+    }
+}
+
+async fn game(socket: &UdpSocket, oldmesh: Arc<AtomicBool>, listener: &TcpListener) -> tokio::io::Result<()> {
     let mut scr_w = 1920i32;
     let mut scr_h = 1080i32;
     let mut framenum = 0u64;
@@ -88,8 +129,9 @@ async fn main() -> tokio::io::Result<()> {
         0.8*vec3a(0.47, 0.41, 0.34),
         0.0,
     );
-
     ground.set_scale(3.0,1.0,3.0);
+
+    //println!("{:?}", ground.mesh.vertices.len());
 
     // 1D noise test
     /*
@@ -170,7 +212,7 @@ async fn main() -> tokio::io::Result<()> {
     unsafe {
         gl::Enable(gl::DEPTH_TEST);
         gl::ClearColor(0.2, 0.3, 0.3, 1.0);
-        lighting_program = ShaderProgram::new("src/shaders/lighting.vs", "src/shaders/lighting.fs");
+        lighting_program = ShaderProgram::new("client/src/shaders/lighting.vs", "client/src/shaders/lighting.fs");
 
         lighting_program.set_vec3fv(b"lightColor\0", MAX_LIGHTS, &light_colors[0]);
         lighting_program.set_vec3fv(b"lightPos\0", MAX_LIGHTS, &light_positions[0]);
@@ -190,6 +232,48 @@ async fn main() -> tokio::io::Result<()> {
 
 
     while !window.should_close() {
+        if oldmesh.load(Ordering::Relaxed) {
+            let mut recv = vec!();
+            match listener.accept().await {
+                Ok((stream, addr)) => {
+                    stream.readable().await?;
+                    let mut buf = [0; 1024];
+                    loop {
+                        match stream.try_read(&mut buf) {
+                            Ok(0) => {
+                                println!("read {} bytes", 0);
+                                break;
+                            }
+                            Ok(n) => {
+                                println!("read {} bytes", n);
+                                recv.extend_from_slice(&buf[..n]);
+                            }
+                            Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
+                                continue;
+                            }
+                            Err(e) => {
+                                println!("Error");
+                            }
+                        }
+                    }
+                    let mut m = Message::try_from_data(addr, &recv).unwrap();
+                    let amt = m.extract_f32(5).unwrap();
+                    let idx = m.extract_u32(1).unwrap();
+                    ground.mesh.mutate(idx as usize,vec3a(0.0,1.0,0.0),amt);
+                }
+                Err(e) => println!("couldn't get client: {:?}", e),
+            }
+
+            //let mut m = Message::new(SERVER_SOCKET, Command::GNDSTATE);
+            //m.push_bytes(player.player_id.as_bytes());
+            //socket.send(&m.get_bytes()).await?;
+            oldmesh.store(false,Ordering::Relaxed);
+        }
+        
+        let mut m = Message::new(SERVER_SOCKET, Command::STATE);
+        m.push_bytes(player.player_id.as_bytes());
+        socket.send(&m.get_bytes()).await?;
+
         glfw.poll_events();
         window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
         for (_, event) in glfw::flush_messages(&events) {
@@ -241,11 +325,20 @@ async fn main() -> tokio::io::Result<()> {
 
         if keystates[10] == 1 || keystates [11] == 1 {
             if rt_marker.pos.xz().distance(ORIGIN.xz()) >= GROUND_IMMUTABLE_RADIUS {
+                let mut m = Message::new(SERVER_SOCKET, Command::MUT);
                 if keystates[10] == 1 && keystates[11] == 0 {
-                    ground.mesh.mutate(i, vec3a(0.0,1.0,0.0), player.ability.ground_mut_power);
+                    //ground.mesh.mutate(i, vec3a(0.0,1.0,0.0), player.ability.ground_mut_power);
+                    m.push_bytes(player.player_id.as_bytes());
+                    m.push_bytes((i as u32).as_bytes());
+                    m.push_bytes(player.ability.ground_mut_power.as_bytes());
+                    socket.send(&m.get_bytes()).await?;
                 }
                 if keystates[10] == 0 && keystates[11] == 1 {
-                    ground.mesh.mutate(i, vec3a(0.0,-1.0,0.0), player.ability.ground_mut_power);
+                    //ground.mesh.mutate(i, vec3a(0.0,-1.0,0.0), player.ability.ground_mut_power);
+                    m.push_bytes(player.player_id.as_bytes());
+                    m.push_bytes((i as u32).as_bytes());
+                    m.push_bytes((-player.ability.ground_mut_power).as_bytes());
+                    socket.send(&m.get_bytes()).await?;
                 }
             }
         }
@@ -345,15 +438,17 @@ async fn main() -> tokio::io::Result<()> {
         let p = player.pos_cmd();
         socket.send(&p).await?;
 
-        let mut buf = vec![0; 1024];
-        let (size, _peer) = socket.recv_from(&mut buf).await?;
-        let s = str::from_utf8(&buf[..size]).unwrap();
-        println!("Reply from server: {}",s);
+        let mut m = Message::new(SERVER_SOCKET, Command::PPOS);
+        m.push_bytes(player.player_id.as_bytes());
+        m.push_bytes(vec!(0));
+        socket.send(&m.get_bytes()).await?;
+
 
         window.swap_buffers();
-        thread::sleep(DELTA_TIME);
+        tokio::time::sleep(DELTA_TIME).await;
         framenum += 1;
         //dbg!(player.on_ground);
+
     }
 
     Ok(())

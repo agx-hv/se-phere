@@ -74,4 +74,26 @@ impl Mesh {
             }
         }
     }
+    pub fn set_vertex_height(&mut self, idx: usize, height: f32) {
+        let dir = vec3a(0.0,1.0,0.0);
+        self.vertices[idx] = dir*height;
+        self.vertices_normals = vec!();
+        for face in &mut self.faces {
+            let n: Vec3A;
+            let mut triangle_verts = [vec3a(0.0,0.0,0.0);3];
+            for i in 0..3 {
+                let v = &self.vertices[face.vertices[i] as usize];
+                triangle_verts[i] = vec3a(v[0], v[1], v[2]);
+            }
+            n = (triangle_verts[1]-triangle_verts[0]).cross(triangle_verts[2]-triangle_verts[0]).normalize();
+            face.normal = stl_io::Vector::new([n.x,n.y,n.z]);
+            for i in face.vertices {
+                let v = &self.vertices[i as usize];
+                self.vertices_normals.push(
+                    vec3a(v[0], v[1], v[2])
+                );
+                self.vertices_normals.push(n);
+            }
+        }
+    }
 }
