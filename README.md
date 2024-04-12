@@ -11,4 +11,5 @@ Rust OpenGL sephere game
 3. Download cmake - <https://cmake.org/download/>
 4. ``` git clone https://github.com/agx-hv/se-phere ```
 5. ``` cd .\se-phere\ ```
-6. ``` cargo run ```
+6. ``` cargo run --bin server --release ```
+7. ``` cargo run --bin client --release ```
