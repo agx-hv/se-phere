@@ -102,7 +102,7 @@ async fn listen(socket: &UdpSocket, counter: Arc<AtomicU64>, num_players: Arc<At
                 let num_mutations = m.extract_u64(1).unwrap();
                 if counter.load(Ordering::Relaxed) < num_mutations {
                     counter.store(num_mutations,Ordering::Relaxed);
-                    //println!("{:?}", counter);
+                    println!("{:?}", counter);
                 }
             },
             _ => {dbg!(&m); },
@@ -464,19 +464,23 @@ async fn game(socket: &UdpSocket, socket2: &UdpSocket, counter: Arc<AtomicU64>, 
         }
 
         if icounter < counter.load(Ordering::Relaxed) {
+            let mut m = Message::new(Command::GNDSTATE);
+            m.push_bytes(player.player_id.as_bytes());
+            listener.send(&m.get_bytes()).await?;
             let mut buf = vec![0; 1024];
             let (size, peer) = listener.recv_from(&mut buf).await?;
-            let m = Message::try_from_data(peer, &buf[..size]).unwrap();
-            match m.command {
-                Command::MUT => { 
-                    let amt = m.extract_f32(5).unwrap();
-                    let idx = m.extract_u32(1).unwrap();
-                    ground.mesh.mutate(idx as usize,vec3a(0.0,1.0,0.0),amt);
-                    icounter += 1;
-                    //dbg!(icounter);
-                },
-                _ => {dbg!(&m); },
-            }
+            if let Some(m) = Message::try_from_data(peer, &buf[..size]) {
+				match m.command {
+					Command::MUT => { 
+						let amt = m.extract_f32(5).unwrap();
+						let idx = m.extract_u32(1).unwrap();
+						ground.mesh.mutate(idx as usize,vec3a(0.0,1.0,0.0),amt);
+						icounter += 1;
+						dbg!(icounter);
+					},
+					_ => {dbg!(&m); },
+				}
+			}
         }
 
         if player.detect_col(&ground).0 {

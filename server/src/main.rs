@@ -39,6 +39,7 @@ impl Server {
         } = self;
 
         let mut player_sockets = vec!();
+        let mut player_buffers: [Option<Vec<u8>>; 32] = Default::default();
         loop {
             // First we check to see if there's a message we need to echo back.
             // If so then we try to send it back to the original source, waiting
@@ -67,6 +68,12 @@ impl Server {
                                 reply.push_bytes(self.state.num_players.as_bytes());
                                 reply.push_bytes(self.state.ground.frame.as_bytes());
                                 socket.send_to(&reply.get_bytes(), &peer).await?;
+                                /*
+                                if let Some(v) = &player_buffers[pid as usize] {
+                                    dbg!(v);
+                                    socket.send_to(v.as_slice(), &peer).await?;
+                                    player_buffers[pid as usize] = None; 
+                                }*/
                             } else {
                                 println!("Invalid payload for command: {:?} (0x{:02x})", m.command, b[0]);
                             }
@@ -95,9 +102,14 @@ impl Server {
                                 //self.state.ground.mutations[idx as usize] += amt;
                                 //println!("PID {} wants to mutate idx {} by {}", pid, idx, amt);
 
-                                let reply = m.get_bytes();
+                                let data = m.get_bytes();
+                                for p in 0..self.state.num_players {
+                                    let mut v = vec!();
+                                    v.extend_from_slice(&data);
+                                    player_buffers[p as usize] = Some(v);
+                                }
                                 for ps in &player_sockets {
-                                    socket.send_to(&reply, &ps).await?;
+                                    socket.send_to(&data, &ps).await?;
                                 }
 
                             } else {
@@ -121,12 +133,17 @@ impl Server {
                         },
                         Command::GNDSTATE => {
                             if let Some(pid) = m.extract_u8(0) {
-                                //println!("PID {} wants to know the ground state", pid);
+                                if let Some(v) = &player_buffers[pid as usize] {
+                                    socket.send_to(v.as_slice(), &peer).await?;
+                                    player_buffers[pid as usize] = None; 
+                                } else {
+                                    socket.send_to(&[], &peer).await?;
+                                }
                             } else {
                                 println!("Invalid payload for command: {:?} (0x{:02x})", m.command, b[0]);
                             }
                         },
-                        _ => {},
+                        _ => { dbg!(&m); },
                     }
                 } else {
                     println!("Invalid Command 0x{:02x}", b[0]);
