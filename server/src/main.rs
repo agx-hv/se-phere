@@ -5,18 +5,21 @@ use tokio::net::{UdpSocket, TcpStream};
 use glam::*;
 use messaging::{Message, Command, AsBytes};
 
+#[derive(Debug, Copy, Clone)]
 struct Player {
+    pid: u8,
     pos: Vec3A,
 }
 
 struct Ground {
-    num_mutations: u64,
     mutations: [f32; 65536],
+    frame: u64,
 }
 
 struct GameState {
-    players: Vec<Player>,
+    players: [Option<Player>; 64],
     ground: Ground,
+    num_players: u8,
 }
 
 struct Server {
@@ -35,6 +38,7 @@ impl Server {
             ref state,
         } = self;
 
+        let mut player_sockets = vec!();
         loop {
             // First we check to see if there's a message we need to echo back.
             // If so then we try to send it back to the original source, waiting
@@ -42,15 +46,31 @@ impl Server {
             if let Some((size, peer)) = to_send {
                 let b = &buf[..size];
                 if let Some(mut m) = Message::try_from_data(peer, b) {
-                    //println!("Received command {:?} from {}", m.command, m.socket_addr);
+                    println!("Received command {:?} from {}", m.command, peer);
                     match m.command {
+                        Command::LOGIN => {
+                            let mut reply = Message::new(Command::SET_PID);
+                            reply.push_bytes((player_sockets.len() as u8).as_bytes());
+                            if let Some(port) = m.extract_u32(4) {
+                                let ls = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(
+                                            m.extract_u8(0).unwrap(),
+                                            m.extract_u8(1).unwrap(),
+                                            m.extract_u8(2).unwrap(),
+                                            m.extract_u8(3).unwrap(),
+                                            )), port as u16);
+                                player_sockets.push(ls);
+                                socket.send_to(&reply.get_bytes(), &peer).await?;
+                                self.state.num_players += 1;
+                            }
+                            dbg!(&player_sockets);
+                        },
                         Command::BLOB => {},
                         Command::STATE => {
                             if let Some(pid) = m.extract_u8(0) {
                                 //println!("PID {} wants the gamestate", pid);
-                                let mut reply = Message::new(peer, Command::R_STATE);
-                                reply.push_bytes((self.state.players.len() as u8).as_bytes());
-                                reply.push_bytes(self.state.ground.num_mutations.as_bytes());
+                                let mut reply = Message::new(Command::R_STATE);
+                                reply.push_bytes(self.state.num_players.as_bytes());
+                                reply.push_bytes(self.state.ground.frame.as_bytes());
                                 socket.send_to(&reply.get_bytes(), &peer).await?;
                             } else {
                                 println!("Invalid payload for command: {:?} (0x{:02x})", m.command, b[0]);
@@ -58,7 +78,16 @@ impl Server {
                         }
                         Command::POS => {
                             if let Some(pos) = m.extract_vec3a(1) {
-                                //println!("PID {} is at {}", m.extract_u8(0).unwrap(), pos);
+                                let pid = m.extract_u8(0).unwrap();
+                                if let Some(p) = &mut self.state.players[pid as usize] {
+                                    *p.pos = *pos;
+                                } else {
+                                    let p = Some(Player {
+                                        pid,
+                                        pos,
+                                    });
+                                    self.state.players[pid as usize] = p;
+                                }
                             } else {
                                 println!("Invalid payload for command: {:?} (0x{:02x})", m.command, b[0]);
                             }
@@ -67,20 +96,26 @@ impl Server {
                             if let Some(amt) = m.extract_f32(5) {
                                 let pid = m.extract_u8(0).unwrap();
                                 let idx = m.extract_u32(1).unwrap();
-                                self.state.ground.num_mutations += 1;
+                                self.state.ground.frame += 1;
                                 self.state.ground.mutations[idx as usize] += amt;
                                 println!("PID {} wants to mutate idx {} by {}", pid, idx, amt);
 
-                                let stream = TcpStream::connect("127.0.0.1:42069").await?;
-                                stream.writable().await?;
+                                let reply = m.get_bytes();
 
-                                match stream.try_write(&m.get_bytes()) {
-                                    Ok(n) => {
-                                        println!("Sending {:?} bytes",n);
-                                    }
-                                    Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                                    }
-                                    Err(e) => {
+                                for ls in &player_sockets {
+                                    let stream = TcpStream::connect(ls).await?;
+                                    stream.writable().await?;
+
+
+                                    match stream.try_write(&reply) {
+                                        Ok(n) => {
+                                            println!("Sending {:?} bytes",n);
+                                        }
+                                        Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                                        }
+                                        Err(e) => {
+                                            println!("{:?}", e);
+                                        }
                                     }
                                 }
 
@@ -90,12 +125,15 @@ impl Server {
 
                         },
                         Command::PPOS => {
-                            if let Some(qpid) = m.extract_u8(1) {
-                                let pid = m.extract_u8(0).unwrap();
-                                //println!("PID {} wants to know the position of PID {}", pid, qpid);
-                                //let mut reply = Message::new(peer, Command::R_PPOS);
-                                //reply.push_bytes(vec3a(0.0,0.0,0.0).as_bytes());
-                                //socket.send_to(&reply.get_bytes(), &peer).await?;
+                            if let Some(pid) = m.extract_u8(0) {
+                                let mut reply = Message::new(Command::R_PPOS);
+                                reply.push_bytes(self.state.num_players.as_bytes());
+                                for i in 0..self.state.num_players {
+                                    if let Some(p) = self.state.players[i as usize] {
+                                        reply.push_bytes(p.pos.as_bytes());
+                                    }
+                                }
+                                socket.send_to(&reply.get_bytes(), &peer).await?;
                             } else {
                                 println!("Invalid payload for command: {:?} (0x{:02x})", m.command, b[0]);
                             }
@@ -103,31 +141,6 @@ impl Server {
                         Command::GNDSTATE => {
                             if let Some(pid) = m.extract_u8(0) {
                                 println!("PID {} wants to know the ground state", pid);
-                                let mut reply = Message::new(peer, Command::R_GNDSTATE);
-                                let size = 4*self.state.ground.mutations.len() as u32;
-                                reply.push_bytes(size.as_bytes());
-                                socket.send_to(&reply.get_bytes(), &peer).await?;
-
-                                let stream = TcpStream::connect("127.0.0.1:42069").await?;
-                                // Wait for the socket to be writable
-                                stream.writable().await?;
-
-                                // Try to write data, this may still fail with `WouldBlock`
-                                // if the readiness event is a false positive.
-                                let mut b = vec!();
-                                for f in self.state.ground.mutations {
-                                    b.append(&mut f.as_bytes());
-                                }
-                                match stream.try_write(b.as_slice()) {
-                                    Ok(n) => {
-                                        println!("Sending {:?} bytes",n);
-                                    }
-                                    Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                                    }
-                                    Err(e) => {
-                                    }
-                                }
-
                             } else {
                                 println!("Invalid payload for command: {:?} (0x{:02x})", m.command, b[0]);
                             }
@@ -161,11 +174,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         buf: vec![0; 1024],
         to_send: None,
         state: GameState {
-            players: vec!(),
+            players: [None; 64],
             ground: Ground {
-                num_mutations: 0,
                 mutations: [0f32; 65536],
+                frame: 0u64,
             },
+            num_players: 0u8,
         },
     };
 

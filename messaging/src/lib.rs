@@ -14,15 +14,12 @@ pub enum Command {
     R_PPOS,            // 0x06
     GNDSTATE,          // 0x07
     R_GNDSTATE,        // 0x08
-}
-pub enum MessageType {
-    INCOMING,
-    OUTGOING,
+    LOGIN,             // 0x09
+    SET_PID            // 0x10
 }
 
 #[derive(Debug)]
 pub struct Message {
-    pub socket_addr: SocketAddr,
     pub command: Command,
     pub payload: Vec<u8>,
 }
@@ -68,9 +65,8 @@ impl AsBytes for u8 {
 
 
 impl Message {
-    pub fn new(socket_addr: SocketAddr, command: Command) -> Self {
+    pub fn new(command: Command) -> Self {
         Message {
-            socket_addr,
             command,
             payload: vec!(),
         }
@@ -88,7 +84,6 @@ impl Message {
         let mut payload = vec!();
         payload.extend_from_slice(data.get(1..)?);
         Some(Message {
-            socket_addr,
             command: command?,
             payload: payload,
         })

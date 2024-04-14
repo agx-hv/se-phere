@@ -31,7 +31,7 @@ pub struct Entity {
 }
 
 impl Player {
-    pub fn new(stl_path: &str, pos: Vec3A, color: Vec3A, camera: PlayerCamera, bounce: f32) -> Self {
+    pub fn new(stl_path: &str, pos: Vec3A, color: Vec3A, camera: PlayerCamera, bounce: f32, player_id: u8) -> Self {
         let e = Entity::new(stl_path,pos,color,bounce);
         Player {
             vec: vec3a(0.0, 0.0, 0.0),
@@ -40,7 +40,7 @@ impl Player {
             radius: 0.1,
             on_ground: false,
             ability: Ability{ground_mut_power: 0.05},
-            player_id: 0,
+            player_id,
         }
     }
     pub fn mv(&mut self, t_vec: Vec3A) { // function to add velocity
