@@ -37,8 +37,8 @@ const PLAYER_SPAWN_RADIUS: f32 = 10.0;
 const CUBE_SPAWN_RADIUS: f32 = 5.0;
 const CUBE_RESPAWN_TIME: u64 = 60;
 const MAX_LIGHTS: usize = 16;
-const LOCAL_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-const SERVER_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(192, 168, 0, 12));
+const LOCAL_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
+const SERVER_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(132, 147, 124, 62));
 const SERVER_PORT: u16 = 42069;
 const SERVER_SOCKET: SocketAddr = SocketAddr::new(SERVER_IP_ADDR, SERVER_PORT);
 
@@ -46,24 +46,25 @@ const SERVER_SOCKET: SocketAddr = SocketAddr::new(SERVER_IP_ADDR, SERVER_PORT);
 async fn main() -> tokio::io::Result<()> {
     let counter = Arc::new(AtomicU64::new(0));
     let num_players = Arc::new(AtomicU8::new(0));
-    let oldmesh = Arc::new(AtomicBool::new(false));
     // Create UDP socket
     let socket = UdpSocket::bind(LOCAL_IP_ADDR.to_string()+":0").await?;
     let socket2 = UdpSocket::bind(LOCAL_IP_ADDR.to_string()+":0").await?;
     socket.connect(SERVER_SOCKET).await?;
     socket2.connect(SERVER_SOCKET).await?;
 
-    let listener = TcpListener::bind(LOCAL_IP_ADDR.to_string()+":0").await?;
+    let listener = UdpSocket::bind(LOCAL_IP_ADDR.to_string()+":0").await?;
+    listener.connect(SERVER_SOCKET).await?;
 
     let SocketAddr::V4(v4) = &listener.local_addr().unwrap() else {
         unreachable!()
     };
 	
-	//dbg!(v4.ip().octets());
-	//dbg!(v4.port());
+	dbg!(&socket);
+	dbg!(&socket2);
+	dbg!(v4.ip());
+	dbg!(v4.port());
 
 	let mut m = Message::new(Command::LOGIN);
-	m.push_bytes(v4.ip().octets().to_vec());
 	m.push_bytes((v4.port() as u32).as_bytes());
 	socket.send(&m.get_bytes()).await?;
 
@@ -73,9 +74,10 @@ async fn main() -> tokio::io::Result<()> {
 	match m.command {
         Command::SET_PID => {
             let pid = m.extract_u8(0).unwrap();
+            dbg!(&pid);
             tokio::join!(
-                game(&socket, &socket2, oldmesh.clone(), &listener, pid, num_players.clone()),
-                listen(&socket, counter.clone(), oldmesh.clone(), num_players.clone())
+                game(&socket, &socket2, counter.clone(), &listener, pid, num_players.clone()),
+                listen(&socket, counter.clone(), num_players.clone(), pid)
             );
         }
 		_ => {dbg!(&m); },
@@ -85,8 +87,12 @@ async fn main() -> tokio::io::Result<()> {
     Ok(())
 }
 
-async fn listen(socket: &UdpSocket, counter: Arc<AtomicU64>, oldmesh: Arc<AtomicBool>, num_players: Arc<AtomicU8>) -> tokio::io::Result<()> {
+async fn listen(socket: &UdpSocket, counter: Arc<AtomicU64>, num_players: Arc<AtomicU8>, pid: u8) -> tokio::io::Result<()> {
     loop {
+        let mut m = Message::new(Command::STATE);
+        m.push_bytes(pid.as_bytes());
+        socket.send(&m.get_bytes()).await?;
+
         let mut buf = vec![0; 1024];
         let (size, peer) = socket.recv_from(&mut buf).await?;
         let m = Message::try_from_data(peer, &buf[..size]).unwrap();
@@ -96,16 +102,17 @@ async fn listen(socket: &UdpSocket, counter: Arc<AtomicU64>, oldmesh: Arc<Atomic
                 let num_mutations = m.extract_u64(1).unwrap();
                 if counter.load(Ordering::Relaxed) < num_mutations {
                     counter.store(num_mutations,Ordering::Relaxed);
-                    oldmesh.store(true,Ordering::Relaxed);
+                    //println!("{:?}", counter);
                 }
-                //println!("{:?}", counter);
             },
             _ => {dbg!(&m); },
         }
     }
 }
 
-async fn game(socket: &UdpSocket, socket2: &UdpSocket, oldmesh: Arc<AtomicBool>, listener: &TcpListener, pid: u8, num_players: Arc<AtomicU8>) -> tokio::io::Result<()> {
+async fn game(socket: &UdpSocket, socket2: &UdpSocket, counter: Arc<AtomicU64>, listener: &UdpSocket, pid: u8, num_players: Arc<AtomicU8>) -> tokio::io::Result<()> {
+    let mut icounter = 0u64;
+
     let mut scr_w = 1920i32;
     let mut scr_h = 1080i32;
     let mut framenum = 0u64;
@@ -275,53 +282,7 @@ async fn game(socket: &UdpSocket, socket2: &UdpSocket, oldmesh: Arc<AtomicBool>,
             other_player_entities.push(newplayer);
         }
         
-        if oldmesh.load(Ordering::Relaxed) {
-            let mut recv = vec!();
-            match listener.accept().await {
-                Ok((stream, addr)) => {
-                    stream.readable().await?;
-                    let mut buf = [0; 1024];
-                    loop {
-                        match stream.try_read(&mut buf) {
-                            Ok(0) => {
-                                //println!("read {} bytes", 0);
-                                break;
-                            }
-                            Ok(n) => {
-                                //println!("read {} bytes", n);
-                                recv.extend_from_slice(&buf[..n]);
-                            }
-                            Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
-                                continue;
-                            }
-                            Err(e) => {
-                                println!("Error");
-                            }
-                        }
-                    }
-                    let mut m = Message::try_from_data(addr, &recv).unwrap();
-
-                    match m.command {
-                        Command::MUT => {
-                            let amt = m.extract_f32(5).unwrap();
-                            let idx = m.extract_u32(1).unwrap();
-                            ground.mesh.mutate(idx as usize,vec3a(0.0,1.0,0.0),amt);
-                        }, 
-                        _ => {
-                            //dbg!(m);
-                        }
-                    }
-
-                }
-                Err(e) => println!("couldn't get client: {:?}", e),
-            }
-
-            oldmesh.store(false,Ordering::Relaxed);
-        }
         
-        let mut m = Message::new(Command::STATE);
-        m.push_bytes(player.player_id.as_bytes());
-        socket.send(&m.get_bytes()).await?;
 
         glfw.poll_events();
         window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
@@ -380,14 +341,14 @@ async fn game(socket: &UdpSocket, socket2: &UdpSocket, oldmesh: Arc<AtomicBool>,
                     m.push_bytes(player.player_id.as_bytes());
                     m.push_bytes((i as u32).as_bytes());
                     m.push_bytes(player.ability.ground_mut_power.as_bytes());
-                    socket.send(&m.get_bytes()).await?;
+                    listener.send(&m.get_bytes()).await?;
                 }
                 if keystates[10] == 0 && keystates[11] == 1 {
                     //ground.mesh.mutate(i, vec3a(0.0,-1.0,0.0), player.ability.ground_mut_power);
                     m.push_bytes(player.player_id.as_bytes());
                     m.push_bytes((i as u32).as_bytes());
                     m.push_bytes((-player.ability.ground_mut_power).as_bytes());
-                    socket.send(&m.get_bytes()).await?;
+                    listener.send(&m.get_bytes()).await?;
                 }
             }
         }
@@ -462,7 +423,6 @@ async fn game(socket: &UdpSocket, socket2: &UdpSocket, oldmesh: Arc<AtomicBool>,
 
 
         // //mouse control
-        /*
         if x < scr_w as f64 * PAN_TRESHOLD_RATIO{
             player.camera.camera_angle += CAMERA_DELTA;
         }
@@ -476,7 +436,6 @@ async fn game(socket: &UdpSocket, socket2: &UdpSocket, oldmesh: Arc<AtomicBool>,
         else if y > scr_h as f64 * (1.0-TILT_TRESHOLD_RATIO){
             player.camera.tilt += CAMERA_DELTA;
         }
-        */
 
 
         // socket
@@ -502,6 +461,22 @@ async fn game(socket: &UdpSocket, socket2: &UdpSocket, oldmesh: Arc<AtomicBool>,
                 }
             },
             _ => {dbg!(&m); },
+        }
+
+        if icounter < counter.load(Ordering::Relaxed) {
+            let mut buf = vec![0; 1024];
+            let (size, peer) = listener.recv_from(&mut buf).await?;
+            let m = Message::try_from_data(peer, &buf[..size]).unwrap();
+            match m.command {
+                Command::MUT => { 
+                    let amt = m.extract_f32(5).unwrap();
+                    let idx = m.extract_u32(1).unwrap();
+                    ground.mesh.mutate(idx as usize,vec3a(0.0,1.0,0.0),amt);
+                    icounter += 1;
+                    //dbg!(icounter);
+                },
+                _ => {dbg!(&m); },
+            }
         }
 
         if player.detect_col(&ground).0 {

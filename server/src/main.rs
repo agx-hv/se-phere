@@ -46,18 +46,13 @@ impl Server {
             if let Some((size, peer)) = to_send {
                 let b = &buf[..size];
                 if let Some(mut m) = Message::try_from_data(peer, b) {
-                    println!("Received command {:?} from {}", m.command, peer);
+                    //println!("Received command {:?} from {}", m.command, peer);
                     match m.command {
                         Command::LOGIN => {
                             let mut reply = Message::new(Command::SET_PID);
                             reply.push_bytes((player_sockets.len() as u8).as_bytes());
-                            if let Some(port) = m.extract_u32(4) {
-                                let ls = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(
-                                            m.extract_u8(0).unwrap(),
-                                            m.extract_u8(1).unwrap(),
-                                            m.extract_u8(2).unwrap(),
-                                            m.extract_u8(3).unwrap(),
-                                            )), port as u16);
+                            if let Some(port) = m.extract_u32(0) {
+                                let ls = SocketAddr::new(peer.ip(), port as u16);
                                 player_sockets.push(ls);
                                 socket.send_to(&reply.get_bytes(), &peer).await?;
                                 self.state.num_players += 1;
@@ -97,26 +92,12 @@ impl Server {
                                 let pid = m.extract_u8(0).unwrap();
                                 let idx = m.extract_u32(1).unwrap();
                                 self.state.ground.frame += 1;
-                                self.state.ground.mutations[idx as usize] += amt;
-                                println!("PID {} wants to mutate idx {} by {}", pid, idx, amt);
+                                //self.state.ground.mutations[idx as usize] += amt;
+                                //println!("PID {} wants to mutate idx {} by {}", pid, idx, amt);
 
                                 let reply = m.get_bytes();
-
-                                for ls in &player_sockets {
-                                    let stream = TcpStream::connect(ls).await?;
-                                    stream.writable().await?;
-
-
-                                    match stream.try_write(&reply) {
-                                        Ok(n) => {
-                                            println!("Sending {:?} bytes",n);
-                                        }
-                                        Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                                        }
-                                        Err(e) => {
-                                            println!("{:?}", e);
-                                        }
-                                    }
+                                for ps in &player_sockets {
+                                    socket.send_to(&reply, &ps).await?;
                                 }
 
                             } else {
@@ -140,7 +121,7 @@ impl Server {
                         },
                         Command::GNDSTATE => {
                             if let Some(pid) = m.extract_u8(0) {
-                                println!("PID {} wants to know the ground state", pid);
+                                //println!("PID {} wants to know the ground state", pid);
                             } else {
                                 println!("Invalid payload for command: {:?} (0x{:02x})", m.command, b[0]);
                             }
@@ -164,7 +145,7 @@ impl Server {
 async fn main() -> Result<(), Box<dyn Error>> {
     let addr = env::args()
         .nth(1)
-        .unwrap_or_else(|| "127.0.0.1:42069".to_string());
+        .unwrap_or_else(|| "0.0.0.0:42069".to_string());
 
     let socket = UdpSocket::bind(&addr).await?;
     println!("Listening on: {}", socket.local_addr()?);
