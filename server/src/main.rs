@@ -108,9 +108,10 @@ impl Server {
                                     v.extend_from_slice(&data);
                                     player_buffers[p as usize] = Some(v);
                                 }
+                                /*
                                 for ps in &player_sockets {
                                     socket.send_to(&data, &ps).await?;
-                                }
+                                }*/
 
                             } else {
                                 println!("Invalid payload for command: {:?} (0x{:02x})", m.command, b[0]);

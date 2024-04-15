@@ -38,7 +38,7 @@ const CUBE_SPAWN_RADIUS: f32 = 5.0;
 const CUBE_RESPAWN_TIME: u64 = 60;
 const MAX_LIGHTS: usize = 16;
 const LOCAL_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
-const SERVER_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(132, 147, 124, 62));
+const SERVER_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(132,147,124,62));
 const SERVER_PORT: u16 = 42069;
 const SERVER_SOCKET: SocketAddr = SocketAddr::new(SERVER_IP_ADDR, SERVER_PORT);
 
@@ -112,7 +112,6 @@ async fn listen(socket: &UdpSocket, counter: Arc<AtomicU64>, num_players: Arc<At
 
 async fn game(socket: &UdpSocket, socket2: &UdpSocket, counter: Arc<AtomicU64>, listener: &UdpSocket, pid: u8, num_players: Arc<AtomicU8>) -> tokio::io::Result<()> {
     let mut icounter = 0u64;
-
     let mut scr_w = 1920i32;
     let mut scr_h = 1080i32;
     let mut framenum = 0u64;
@@ -271,7 +270,7 @@ async fn game(socket: &UdpSocket, socket2: &UdpSocket, counter: Arc<AtomicU64>, 
 
 
     while !window.should_close() {
-        if num_players.load(Ordering::Relaxed) - 1 > other_player_entities.len() as u8 {
+        if num_players.load(Ordering::Relaxed) > other_player_entities.len() as u8 {
             let mut newplayer = Entity::new(
                 "assets/mesh/sephere.stl",
                 ORIGIN,
@@ -455,7 +454,9 @@ async fn game(socket: &UdpSocket, socket2: &UdpSocket, counter: Arc<AtomicU64>, 
                 for i in 0..m.extract_u8(0).unwrap() as usize {
                     if pid != i as u8 {
                         if let Some(ppos) = m.extract_vec3a(1+12*i) {
-                            other_player_entities[i].pos = ppos;
+                            if i < other_player_entities.len() {
+                                other_player_entities[i].pos = ppos;
+                            }
                         }
                     }
                 }
