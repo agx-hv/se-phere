@@ -5,6 +5,7 @@ use tokio::net::{UdpSocket, TcpStream};
 use glam::*;
 use messaging::{Message, Command, AsBytes};
 
+const MUTATION_STACK: usize = 20199; //max for windows is 20199, empirically tested, may change
 #[derive(Debug, Copy, Clone)]
 struct Player {
     pid: u8,
@@ -12,7 +13,7 @@ struct Player {
 }
 
 struct Ground {
-    mutations: [f32; 65536],
+    mutations: [f32; MUTATION_STACK],
     frame: u64,
 }
 
@@ -175,7 +176,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         state: GameState {
             players: [None; 64],
             ground: Ground {
-                mutations: [0f32; 65536],
+                mutations: [0f32; MUTATION_STACK],
                 frame: 0u64,
             },
             num_players: 0u8,
