@@ -11,5 +11,10 @@ Rust OpenGL sephere game
 3. Download cmake - <https://cmake.org/download/>
 4. ``` git clone https://github.com/agx-hv/se-phere ```
 5. ``` cd .\se-phere\ ```
-6. ``` cargo run --bin server --release ```
-7. ``` cargo run --bin client --release ```
+
+## Running The Game
+
+1. get IP with ipconfig
+2. ``` cargo run --bin server --release ``` or run RunServer.sh
+3. set SERVER_IP_ADDR (line 42) in clinet\src\main.rs to ip address, changing '.' to ','
+4. ``` cargo run --bin client --release ``` or run RunClient.sh
