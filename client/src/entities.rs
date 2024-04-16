@@ -270,5 +270,4 @@ impl Entity {
         }
         closest_idx
     }
-
 }

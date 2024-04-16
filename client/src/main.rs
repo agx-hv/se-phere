@@ -16,6 +16,7 @@ use entities::*;
 pub mod keys;
 use std::{str, thread, time, f32::consts::PI};
 use rand::*;
+use crate::meshloader::Mesh;
 
 // net, tokio, messaging
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -39,7 +40,7 @@ const CUBE_SPAWN_RADIUS: f32 = 5.0;
 const CUBE_RESPAWN_TIME: u64 = 60;
 const MAX_LIGHTS: usize = 16;
 const LOCAL_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
-const SERVER_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(192,168,1,109));
+const SERVER_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(127,0,0,1));
 const SERVER_PORT: u16 = 42069;
 const SERVER_SOCKET: SocketAddr = SocketAddr::new(SERVER_IP_ADDR, SERVER_PORT);
 
@@ -196,13 +197,15 @@ async fn game(socket: &UdpSocket,
     
     let mut rng = thread_rng();
 
-
     let theta = rng.gen_range(0.0..2.0*PI);
     let player_init_pos = vec3a(PLAYER_SPAWN_RADIUS*f32::cos(theta), 0.1, PLAYER_SPAWN_RADIUS*f32::sin(theta));
     let player_init_cam = camera::PlayerCamera::new(player_init_pos, scr_w as f32/scr_h as f32, f32::atan2(player_init_pos.x, player_init_pos.z));
+
+    let mut myscore = 0;
+
     // initializing entities as Entity
     let mut player = Player::new(
-        "assets/mesh/sephere.stl",
+        "assets/mesh/small_sphere.stl",
         player_init_pos,
         1.0*vec3a(0.1, 0.5, 0.2),
         player_init_cam,
@@ -231,11 +234,11 @@ async fn game(socket: &UdpSocket,
     let cube_pos = vec3a(cube_r*f32::cos(theta2), -0.5, cube_r*f32::sin(theta2));
 
     let mut other_player_entities = vec!();
-    for _ in 0..=pid {
+    for i in 0..pid {
         let mut newplayer = Entity::new(
-            "assets/mesh/sephere.stl",
+            "assets/mesh/small_sphere.stl",
             ORIGIN,
-            vec3a(0.8, 0.1, 0.8),
+            vec3a(0.1, 0.1, 0.8),
             1.0,
         );
         let mut score = Entity::new(
@@ -247,10 +250,39 @@ async fn game(socket: &UdpSocket,
         other_player_entities.push((newplayer,score));
     }
 
-    let mut myscore = Entity::new(
-        "assets/mesh/0.stl",
+    let mut newplayer = Entity::new(
+        "assets/mesh/small_sphere.stl",
+        ORIGIN,
+        vec3a(0.1, 0.1, 0.8),
+        1.0,
+    );
+    newplayer.set_scale(0.0,0.0,0.0);
+    let mut score = Entity::new(
+        "assets/mesh/3.stl",
         ORIGIN,
         vec3a(0.8, 0.1, 0.8),
+        1.0,
+    );
+    score.set_scale(0.0,0.0,0.0);
+    other_player_entities.push((newplayer,score));
+
+    let score_mesh_arr: [Mesh; 10] = [ 
+        Mesh::new("assets/mesh/0.stl", vec3a(1.0, 1.0, 1.0)),
+        Mesh::new("assets/mesh/1.stl", vec3a(1.0, 1.0, 1.0)),
+        Mesh::new("assets/mesh/2.stl", vec3a(1.0, 1.0, 1.0)),
+        Mesh::new("assets/mesh/3.stl", vec3a(1.0, 1.0, 1.0)),
+        Mesh::new("assets/mesh/4.stl", vec3a(1.0, 1.0, 1.0)),
+        Mesh::new("assets/mesh/5.stl", vec3a(1.0, 1.0, 1.0)),
+        Mesh::new("assets/mesh/6.stl", vec3a(1.0, 1.0, 1.0)),
+        Mesh::new("assets/mesh/7.stl", vec3a(1.0, 1.0, 1.0)),
+        Mesh::new("assets/mesh/8.stl", vec3a(1.0, 1.0, 1.0)),
+        Mesh::new("assets/mesh/9.stl", vec3a(1.0, 1.0, 1.0)),
+    ];
+
+    let mut myscore_entity = Entity::new(
+        "assets/mesh/0.stl",
+        ORIGIN,
+        vec3a(0.1,0.5,0.2),
         1.0,
     );
 
@@ -359,6 +391,7 @@ async fn game(socket: &UdpSocket,
         ground.gl_init();
         rt_marker.gl_init();
         goal_2d.gl_init();
+        myscore_entity.gl_init();
 
         /* initialize ground vertex marker cubes
            for marker in &mut ground_vertex_markers {
@@ -382,7 +415,7 @@ async fn game(socket: &UdpSocket,
 
         if np > other_player_entities.len() as u8 {
             let mut newplayer = Entity::new(
-                "assets/mesh/sephere.stl",
+                "assets/mesh/small_sphere.stl",
                 ORIGIN,
                 vec3a(0.8, 0.1, 0.8),
                 1.0,
@@ -503,6 +536,7 @@ async fn game(socket: &UdpSocket,
             goal_2d.draw(&mut player.camera, &lighting_program);
 
             goal.draw(&mut player.camera, &lighting_program);
+            myscore_entity.draw(&mut player.camera, &lighting_program);
             for (pe,score) in &mut other_player_entities {
                 pe.draw(&mut player.camera, &lighting_program);
                 score.draw(&mut player.camera, &lighting_program);
@@ -523,6 +557,9 @@ async fn game(socket: &UdpSocket,
             player.entity.set_pos(player_init_pos);
             player.camera = player_init_cam;
             player.vec = vec3a(0.0,0.0,0.0);
+            myscore += 1;
+            let mut path = ["assets/mesh/",&myscore.to_string(),".stl"].join("");
+            myscore_entity.mesh = Mesh::new(&path, vec3a(1.0,1.0,1.0));
         }
 
         // player.camera loop
@@ -567,6 +604,7 @@ async fn game(socket: &UdpSocket,
             other_player_entities[i].1.mesh.rotate_y(0.15*framenum as f32);
         }
 
+        myscore_entity.mesh.rotate_y(0.15*framenum as f32);
 
 
         let eye = player.camera.eye();
@@ -574,6 +612,7 @@ async fn game(socket: &UdpSocket,
         let up = player.camera.up();
         let right = forward.cross(up);
         goal_2d.pos = player.camera.eye() + forward*0.02 - right*0.016 - up*0.01 ;
+        myscore_entity.pos = player.pos() + vec3a(0.0,0.3,0.0);
 
 
         window.swap_buffers();
