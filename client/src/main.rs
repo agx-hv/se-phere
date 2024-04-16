@@ -23,6 +23,10 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::env;
 
+// sound
+pub mod music;
+use rodio::{Decoder, OutputStream, source::Source};
+
 // net, tokio, messaging
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::net::{UdpSocket, TcpStream, TcpListener};
@@ -77,6 +81,30 @@ async fn main() -> tokio::io::Result<()> {
 
     let SERVER_SOCKET: SocketAddr = SocketAddr::new(args[1].parse().expect(&format!("Invalid IP: {}", args[1]).to_string()), SERVER_PORT);
     //dbg!(&SERVER_SOCKET);
+
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+
+    let _ = title::main(stream_handle);
+
+    let str_ip = title::read_ip_from_file("ip.txt").unwrap_or_else(|err| {
+        eprintln!("Error reading IP address from file: {}", err);
+        // Default to loopback address if reading fails
+        "127.0.0.1".to_string()
+    });
+
+    // Parse the string IP address into an IpAddr
+    let SERVER_IP: IpAddr = match str_ip.parse() {
+        Ok(ip) => ip,
+        Err(err) => {
+            eprintln!("Error parsing IP address: {:?}", err);
+            // Default to loopback address if parsing fails
+            IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))
+        }
+    };
+
+    dbg!(&SERVER_IP);
+    let SERVER_SOCKET: SocketAddr = SocketAddr::new(SERVER_IP, SERVER_PORT);
+>>>>>>> 66101e9ae7aceb500db0b3117e830cc29f9bcaac
     
     // Create UDP socket
     let socket = UdpSocket::bind(LOCAL_IP_ADDR.to_string()+":0").await?;
@@ -216,6 +244,8 @@ async fn game(socket: &UdpSocket,
 
     let mut myscore = 0;
     let mut myhealth = 3;
+
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
 
     // initializing entities as Entity
     let mut player = Player::new(
@@ -580,15 +610,20 @@ async fn game(socket: &UdpSocket,
             player.camera = player_init_cam;
             player.vec = vec3a(0.0,0.0,0.0);
             if has_goal {
+                if myscore == 9 {
+                    let _ = title::gameover();
+                }
                 myscore += 1;
                 let mut path = ["assets/mesh/",&myscore.to_string(),".stl"].join("");
                 myscore_entity.mesh = Mesh::new(&path, vec3a(1.0,1.0,1.0));
+                music::play("assets/oof.mp3",&stream_handle);
             } else {
                 myhealth -= 1;
                 if myhealth == 0 { break; }
                 myhearts.pop();
                 let mut path = ["assets/mesh/",&myscore.to_string(),".stl"].join("");
                 myscore_entity.mesh = Mesh::new(&path, vec3a(1.0,1.0,1.0));
+                music::play("assets/oof.mp3",&stream_handle);
             }
         }
 
