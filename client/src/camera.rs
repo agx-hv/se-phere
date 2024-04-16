@@ -124,7 +124,7 @@ impl PlayerCamera{
     pub fn eye(&self) -> Vec3A {
         vec3a(
             self.radius*f32::sin(self.camera_angle)*f32::cos(self.tilt),
-            self.radius*f32::sin(self.tilt),
+            self.radius*f32::cos(self.tilt),
             self.radius*f32::cos(self.camera_angle)*f32::cos(self.tilt),
             )
             +self.player_pos
