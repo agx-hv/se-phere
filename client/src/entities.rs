@@ -71,6 +71,7 @@ impl Player {
         let (collided, norm, dist) = self.detect_col_sphere(other);
         if collided {
             self.entity.pos += dist*norm; // Prevent clipping into collided object 
+            self.camera.player_pos += dist*norm; // Prevent clipping into collided object 
             self.vec -= self.vec.dot(norm) * norm * (1.0 + self.entity.bounce*other.bounce); // bonuce formula
         }
     }
@@ -78,6 +79,7 @@ impl Player {
         let (collided, norm, dist) = self.detect_col(other);
         if collided {
             self.entity.pos += dist*norm; // Prevent clipping into collided object 
+            self.camera.player_pos += dist*norm; // Prevent clipping into collided object 
             self.vec -= self.vec.dot(norm) * norm * (1.0 + self.entity.bounce*other.bounce); // bonuce formula
         }
     }

@@ -210,13 +210,13 @@ async fn game(socket: &UdpSocket,
 		pid,
     );
 
-    let mut pixel = Entity::new(
-        "assets/mesh/rt_marker.stl",
+    let mut goal_2d = Entity::new(
+        "assets/mesh/3.stl",
         ORIGIN,
         1.0*vec3a(0.2, 0.2, 0.2),
         1.0,
     );
-    pixel.set_scale(0.001,0.001,0.001);
+    goal_2d.set_scale(0.01,0.01,0.01);
 
     let mut goal = Entity::new(
         "assets/mesh/rt_marker.stl",
@@ -358,7 +358,7 @@ async fn game(socket: &UdpSocket,
         goal.gl_init();
         ground.gl_init();
         rt_marker.gl_init();
-        pixel.gl_init();
+        goal_2d.gl_init();
 
         /* initialize ground vertex marker cubes
            for marker in &mut ground_vertex_markers {
@@ -500,7 +500,7 @@ async fn game(socket: &UdpSocket,
 
             ground.draw(&mut player.camera, &lighting_program);
 
-            pixel.draw(&mut player.camera, &lighting_program);
+            goal_2d.draw(&mut player.camera, &lighting_program);
 
             goal.draw(&mut player.camera, &lighting_program);
             for (pe,score) in &mut other_player_entities {
@@ -573,7 +573,7 @@ async fn game(socket: &UdpSocket,
         let forward = (player.pos()-player.camera.eye()).normalize();
         let up = player.camera.up();
         let right = forward.cross(up);
-        pixel.pos = player.camera.eye() + forward*0.02 - right*0.01 - up*0.01 ;
+        goal_2d.pos = player.camera.eye() + forward*0.02 - right*0.016 - up*0.01 ;
 
 
         window.swap_buffers();
