@@ -4,6 +4,8 @@ use glam::*;
 use crate::meshloader::Mesh;
 use crate::camera::PlayerCamera;
 use crate::shader::ShaderProgram;
+use image::{DynamicImage, GenericImageView};
+
 
 pub struct Player {
     pub vec: Vec3A,
@@ -184,7 +186,29 @@ impl Entity {
         assert_ne!(self.vbo,0);
     }
 
+
+
     pub unsafe fn draw(&mut self, camera: &mut PlayerCamera, lighting_program: &ShaderProgram) {
+
+        let texture = image::open("assets/rock_texture.jpg").expect("Failed to load texture image").to_rgba8();
+        let mut texture_id = 0;
+        gl::GenTextures(1, &mut texture_id);
+        gl::BindTexture(gl::TEXTURE_2D, texture_id);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::REPEAT as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::REPEAT as i32);
+        gl::TexImage2D(
+            gl::TEXTURE_2D,
+            0,
+            gl::RGBA as i32,
+            texture.width() as i32,
+            texture.height() as i32,
+            0,
+            gl::RGBA,
+            gl::UNSIGNED_BYTE,
+            texture.as_ptr() as *const _
+        );
+        gl::GenerateMipmap(gl::TEXTURE_2D);
+
 
         let vertices = self.mesh.vertices_flattened();
         gl::BindVertexArray(self.vao);
@@ -219,7 +243,11 @@ impl Entity {
         let objectColor = self.color * self.reflectance;
         lighting_program.set_vec3f(b"objectColor\0", objectColor[0], objectColor[1], objectColor[2]);
 
+        gl::ActiveTexture(gl::TEXTURE0);
+        gl::BindTexture(gl::TEXTURE_2D, texture_id);
+        
         gl::BindVertexArray(self.vao);
+
         gl::DrawArrays(gl::TRIANGLES, 0, self.mesh.vertices_normals.len() as i32);
 
     }

@@ -1,7 +1,9 @@
 extern crate stl_io;
 extern crate glam;
 use glam::vec3a;
+use glam::vec2;
 use glam::f32::Vec3A;
+use glam::f32::Vec2;
 use stl_io::IndexedTriangle;
 use std::fs::OpenOptions;
 
@@ -11,12 +13,14 @@ pub struct Mesh {
     pub vertices_normals: Vec<Vec3A>,
     pub faces: Vec<IndexedTriangle>,
     pub vertices: Vec<Vec3A>,
+    pub tex_coords: Vec<Vec2>, // New field for texture coordinates
 }
 
 impl Mesh {
     pub fn new(path: &str, scale: Vec3A) -> Self {
         let mut vertices_normals = Vec::new();
         let mut vertices = Vec::new();
+        let mut tex_coords = Vec::new(); // Initialize texture coordinates vector
 
         let mut file = OpenOptions::new().read(true).open(path).unwrap();
         let mesh = stl_io::read_stl(&mut file).unwrap();
@@ -26,6 +30,13 @@ impl Mesh {
             let y = v[1] * scale[1];
             let z = v[2] * scale[2];
             vertices.push(vec3a(x,y,z));
+        }
+
+        // Calculate texture coordinates based on vertex positions
+        for v in &vertices {
+            let u = v.x * 100.0; // Example: Using x-coordinate as texture U coordinate
+            let v = v.z * 100.0; // Example: Using y-coordinate as texture V coordinate
+            tex_coords.push(vec2(u, v));
         }
 
         for face in &mesh.faces {
@@ -44,6 +55,7 @@ impl Mesh {
             vertices_normals,
             faces: mesh.faces,
             vertices,
+            tex_coords, // Assign texture coordinates to the struct field
         }
     }
     pub fn vertices_flattened(&self) -> Vec<f32> {

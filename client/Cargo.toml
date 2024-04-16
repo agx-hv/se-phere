@@ -14,3 +14,5 @@ rand = "0.8.5"
 stl_io = "0.7.0"
 tokio = { version = "1", features = ["full"] }
 messaging = {path = "../messaging"}
+image = "0.23"
+

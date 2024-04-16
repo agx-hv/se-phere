@@ -5,7 +5,7 @@ use tokio::net::{UdpSocket, TcpStream};
 use glam::*;
 use messaging::{Message, Command, AsBytes};
 
-const MUTATION_STACK: usize = 20199; //max for windows is 20199, empirically tested, may change
+const MUTATION_STACK: usize = 1024; //max for windows is 20199, empirically tested, may change
 #[derive(Debug, Copy, Clone)]
 struct Player {
     pid: u8,
