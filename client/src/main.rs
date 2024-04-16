@@ -18,6 +18,10 @@ use std::{str, thread, time, f32::consts::PI};
 use rand::*;
 use crate::meshloader::Mesh;
 
+pub mod title;
+use std::fs::File;
+use std::io::{self, BufRead};
+
 // net, tokio, messaging
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::net::{UdpSocket, TcpStream, TcpListener};
@@ -42,7 +46,7 @@ const MAX_LIGHTS: usize = 16;
 const LOCAL_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 const SERVER_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(127,0,0,1));
 const SERVER_PORT: u16 = 42069;
-const SERVER_SOCKET: SocketAddr = SocketAddr::new(SERVER_IP_ADDR, SERVER_PORT);
+
 
 #[tokio::main]
 async fn main() -> tokio::io::Result<()> {
@@ -65,6 +69,28 @@ async fn main() -> tokio::io::Result<()> {
                             Arc::new(AtomicU32::new(0))
         ));
     }
+    
+    let _ = title::main();
+
+    let str_ip = title::read_ip_from_file("ip.txt").unwrap_or_else(|err| {
+        eprintln!("Error reading IP address from file: {}", err);
+        // Default to loopback address if reading fails
+        "127.0.0.1".to_string()
+    });
+
+    // Parse the string IP address into an IpAddr
+    let SERVER_IP: IpAddr = match str_ip.parse() {
+        Ok(ip) => ip,
+        Err(err) => {
+            eprintln!("Error parsing IP address: {:?}", err);
+            // Default to loopback address if parsing fails
+            IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))
+        }
+    };
+
+    dbg!(&SERVER_IP);
+    let SERVER_SOCKET: SocketAddr = SocketAddr::new(SERVER_IP, SERVER_PORT);
+    
     // Create UDP socket
     let socket = UdpSocket::bind(LOCAL_IP_ADDR.to_string()+":0").await?;
     let socket2 = UdpSocket::bind(LOCAL_IP_ADDR.to_string()+":0").await?;
