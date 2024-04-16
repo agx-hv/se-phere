@@ -1,6 +1,5 @@
 use eframe::egui;
-use std::fs::File;
-use std::io::{BufRead, Write};
+use std::process::Command;
 
 pub fn main() {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
@@ -11,8 +10,7 @@ pub fn main() {
     };
 
     // Our application state:
-    let mut ip = "192.168.0.0".to_owned();
-    let mut result = None;
+    let mut ip = "127.0.0.1".to_owned();
 
     let _ = eframe::run_simple_native("se-phere.io", options, move |ctx, _frame| {
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -25,31 +23,11 @@ pub fn main() {
             });
             ui.label(" ");
             if ui.button("Join Game").clicked() {
-                result = Some(ip.clone());
-                
-                // Write the IP address to a file named "ip.txt"
-                if let Some(ip) = &result {
-                    if let Err(err) = write_ip_to_file(ip) {
-                        eprintln!("Error writing IP to file: {}", err);
-                    }
-                }
-                
+                let result = ip.clone();
+                let _ = Command::new("target/release/client").args([result,]).spawn();
                 ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
             }
         });
     });
 }
 
-fn write_ip_to_file(ip: &str) -> std::io::Result<()> {
-    let mut file = File::create("ip.txt")?;
-    writeln!(file, "{}", ip)?;
-    Ok(())
-}
-
-pub fn read_ip_from_file(filename: &str) -> std::io::Result<String> {
-    let file = File::open(filename)?;
-    let mut reader = std::io::BufReader::new(file);
-    let mut ip = String::new();
-    reader.read_line(&mut ip)?;
-    Ok(ip.trim().to_string())
-}

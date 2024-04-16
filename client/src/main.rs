@@ -1,4 +1,5 @@
 #![allow(non_snake_case)]
+#![allow(unused_mut)]
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 use glam::{vec3a, vec4};
@@ -18,9 +19,9 @@ use std::{str, thread, time, f32::consts::PI};
 use rand::*;
 use crate::meshloader::Mesh;
 
-pub mod title;
 use std::fs::File;
 use std::io::{self, BufRead};
+use std::env;
 
 // net, tokio, messaging
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -44,7 +45,6 @@ const CUBE_SPAWN_RADIUS: f32 = 5.0;
 const CUBE_RESPAWN_TIME: u64 = 60;
 const MAX_LIGHTS: usize = 16;
 const LOCAL_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
-const SERVER_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(127,0,0,1));
 const SERVER_PORT: u16 = 42069;
 
 
@@ -70,26 +70,14 @@ async fn main() -> tokio::io::Result<()> {
         ));
     }
     
-    let _ = title::main();
 
-    let str_ip = title::read_ip_from_file("ip.txt").unwrap_or_else(|err| {
-        eprintln!("Error reading IP address from file: {}", err);
-        // Default to loopback address if reading fails
-        "127.0.0.1".to_string()
-    });
+    let mut args = vec!();
+    for arg in env::args() {
+        args.push(arg);
+    }
 
-    // Parse the string IP address into an IpAddr
-    let SERVER_IP: IpAddr = match str_ip.parse() {
-        Ok(ip) => ip,
-        Err(err) => {
-            eprintln!("Error parsing IP address: {:?}", err);
-            // Default to loopback address if parsing fails
-            IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))
-        }
-    };
-
-    dbg!(&SERVER_IP);
-    let SERVER_SOCKET: SocketAddr = SocketAddr::new(SERVER_IP, SERVER_PORT);
+    let SERVER_SOCKET: SocketAddr = SocketAddr::new(args[1].parse().expect(&format!("Invalid IP: {}", args[1]).to_string()), SERVER_PORT);
+    //dbg!(&SERVER_SOCKET);
     
     // Create UDP socket
     let socket = UdpSocket::bind(LOCAL_IP_ADDR.to_string()+":0").await?;
@@ -372,6 +360,7 @@ async fn game(socket: &UdpSocket,
         glfw.create_window(1920, 1080, "Se-phere!",
             m.map_or(glfw::WindowMode::Windowed, |m| glfw::WindowMode::FullScreen(m)))
     }).expect("Failed to create GLFW window");
+
 
     window.set_key_polling(true);
     window.set_mouse_button_polling(true);
@@ -671,6 +660,8 @@ async fn game(socket: &UdpSocket,
         //dbg!(player.on_ground);
 
     }
+
+    let _ = std::process::Command::new("target/release/gameover").spawn();
 
     Ok(())
 
