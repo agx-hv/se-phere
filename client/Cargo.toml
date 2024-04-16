@@ -18,3 +18,4 @@ image = { version = "0.24", features = ["jpeg", "png"] }
 eframe = "0.27.2"
 env_logger = "0.11.3"
 egui_extras = { version = "*", features = ["all_loaders"] }
+rodio = "0.17.3"

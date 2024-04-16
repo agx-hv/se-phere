@@ -1,8 +1,10 @@
 use eframe::egui;
+use rodio::OutputStreamHandle;
 use std::fs::File;
-use std::io::{BufRead, Write};
+use std::io::{BufRead,BufReader, Write};
+use crate::music;
 
-pub fn main() {
+pub fn main(stream_handle: OutputStreamHandle) {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
     let options = eframe::NativeOptions {
@@ -34,6 +36,8 @@ pub fn main() {
                     }
                 }
 
+                music::play("assets/oof.mp3",&stream_handle);
+
                 ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
             }
         });
@@ -41,7 +45,7 @@ pub fn main() {
 }
 
 pub fn gameover() -> Result<(), eframe::Error> {
-    env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
+    // env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([600.0, 400.0]),
         ..Default::default()

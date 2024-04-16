@@ -18,9 +18,14 @@ use std::{str, thread, time, f32::consts::PI};
 use rand::*;
 use crate::meshloader::Mesh;
 
+// GUI
 pub mod title;
 use std::fs::File;
 use std::io::{self, BufRead};
+
+// sound
+pub mod music;
+use rodio::{Decoder, OutputStream, source::Source};
 
 // net, tokio, messaging
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -69,10 +74,10 @@ async fn main() -> tokio::io::Result<()> {
                             Arc::new(AtomicU32::new(0))
         ));
     }
-    
-    let _ = title::gameover();
 
-    let _ = title::main();
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+
+    let _ = title::main(stream_handle);
 
     let str_ip = title::read_ip_from_file("ip.txt").unwrap_or_else(|err| {
         eprintln!("Error reading IP address from file: {}", err);
@@ -231,6 +236,8 @@ async fn game(socket: &UdpSocket,
 
     let mut myscore = 0;
     let mut myhealth = 3;
+
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
 
     // initializing entities as Entity
     let mut player = Player::new(
@@ -594,15 +601,20 @@ async fn game(socket: &UdpSocket,
             player.camera = player_init_cam;
             player.vec = vec3a(0.0,0.0,0.0);
             if has_goal {
+                if myscore == 9 {
+                    let _ = title::gameover();
+                }
                 myscore += 1;
                 let mut path = ["assets/mesh/",&myscore.to_string(),".stl"].join("");
                 myscore_entity.mesh = Mesh::new(&path, vec3a(1.0,1.0,1.0));
+                music::play("assets/oof.mp3",&stream_handle);
             } else {
                 myhealth -= 1;
                 if myhealth == 0 { break; }
                 myhearts.pop();
                 let mut path = ["assets/mesh/",&myscore.to_string(),".stl"].join("");
                 myscore_entity.mesh = Mesh::new(&path, vec3a(1.0,1.0,1.0));
+                music::play("assets/oof.mp3",&stream_handle);
             }
         }
 
