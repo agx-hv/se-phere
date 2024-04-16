@@ -65,6 +65,13 @@ impl Player {
     pub fn mesh(&self) -> &Mesh {
         &self.entity.mesh
     }
+    pub fn collide_sphere(&mut self, other: &Entity) { 
+        let (collided, norm, dist) = self.detect_col_sphere(other);
+        if collided {
+            self.entity.pos += dist*norm; // Prevent clipping into collided object 
+            self.vec -= self.vec.dot(norm) * norm * (1.0 + self.entity.bounce*other.bounce); // bonuce formula
+        }
+    }
     pub fn collide(&mut self, other: &Entity) { 
         let (collided, norm, dist) = self.detect_col(other);
         if collided {
@@ -73,6 +80,19 @@ impl Player {
         }
     }
 
+    pub fn detect_col_sphere(&self, other: &Entity) -> (bool, Vec3A, f32) {
+        // Performing collision detection logic
+        // There must be a more efficient way other than checking ALL mesh faces
+        let intersection_amt = self.pos().distance(other.pos) - 0.2;
+        if intersection_amt > 0.0 {
+            let n = (self.pos() - other.pos).normalize();
+            return (true, n, intersection_amt);
+        }
+        (false,vec3a(0.0,0.0,0.0),0.0)
+
+    }
+
+    
     pub fn detect_col(&self, other: &Entity) -> (bool, Vec3A, f32) {
         // Performing collision detection logic
         // There must be a more efficient way other than checking ALL mesh faces
@@ -115,6 +135,7 @@ impl Player {
         (false,vec3a(0.0,0.0,0.0),0.0)
 
     }
+
     pub fn pos_cmd(&self) -> [u8; 14] {
         let mut result = vec!(0x02);
         result.extend_from_slice(&[self.player_id]);

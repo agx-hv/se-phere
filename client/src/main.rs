@@ -516,17 +516,18 @@ async fn game(socket: &UdpSocket,
         socket.send(&p).await?;
 
 
-
-
         if player.detect_col(&ground).0 {
             player.collide(&ground);
             player.on_ground = true;
         };
-        /*
-        if player.detect_col(&player2).0 {
-            player.collide(&player2);
-            cube_respawn_frame = framenum + CUBE_RESPAWN_TIME;
-        };*/
+
+        for i in 0..other_player_entities.len() {
+            if i != player.player_id.into() {
+                if player.detect_col(&other_player_entities[i]).0 {
+                    player.collide(&other_player_entities[i]);
+                }
+            }
+        }
 
         window.swap_buffers();
         tokio::time::sleep(DELTA_TIME).await;
