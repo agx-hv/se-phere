@@ -1,5 +1,6 @@
 extern crate glam;
 extern crate gl;
+use gl::types::{GLint, GLuint};
 use glam::*;
 use crate::meshloader::Mesh;
 use crate::camera::PlayerCamera;
@@ -191,30 +192,30 @@ impl Entity {
 
 
     pub unsafe fn draw(&mut self, camera: &mut PlayerCamera, lighting_program: &ShaderProgram) {
-
-        let texture = image::open("assets/rock_texture.jpg").expect("Failed to load texture image").to_rgba8();
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as GLint);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
+        let texture = image::open("assets/rock_texture.jpg").expect("Failed to load texture image").flipv().to_rgb8();
         let mut texture_id = 0;
+        let (width,height) = texture.dimensions();
         gl::GenTextures(1, &mut texture_id);
         gl::BindTexture(gl::TEXTURE_2D, texture_id);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::REPEAT as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::REPEAT as i32);
         gl::TexImage2D(
             gl::TEXTURE_2D,
             0,
-            gl::RGBA as i32,
-            texture.width() as i32,
-            texture.height() as i32,
+            gl::RGB as i32,
+            width as GLint,
+            height as GLint,
             0,
-            gl::RGBA,
+            gl::RGB,
             gl::UNSIGNED_BYTE,
-            texture.as_ptr() as *const _
+            texture.as_ptr() as *const _,
         );
         gl::GenerateMipmap(gl::TEXTURE_2D);
-
 
         let vertices = self.mesh.vertices_flattened();
         gl::BindVertexArray(self.vao);
         gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+        
         gl::BufferData(gl::ARRAY_BUFFER, 
             (vertices.len() * std::mem::size_of::<f32>()) as isize,
             vertices.as_ptr().cast(),
@@ -224,7 +225,7 @@ impl Entity {
             3,
             gl::FLOAT,
             gl::FALSE,
-            (6*std::mem::size_of::<f32>()).try_into().unwrap(),
+            (9*std::mem::size_of::<f32>()).try_into().unwrap(),
             0 as *const _,
         );
         gl::EnableVertexAttribArray(0);
@@ -233,10 +234,19 @@ impl Entity {
             3,
             gl::FLOAT,
             gl::FALSE,
-            (6*std::mem::size_of::<f32>()).try_into().unwrap(),
+            (9*std::mem::size_of::<f32>()).try_into().unwrap(),
             (3*std::mem::size_of::<f32>()) as *const _,
         );
         gl::EnableVertexAttribArray(1);
+        gl::VertexAttribPointer(
+            2,
+            3,
+            gl::FLOAT,
+            gl::FALSE,
+            (9*std::mem::size_of::<f32>()).try_into().unwrap(),
+            (6*std::mem::size_of::<f32>()) as *const _,
+        );
+        gl::EnableVertexAttribArray(2);
 
         let t_mat = Mat4::from_translation(self.pos.into());
         lighting_program.set_mat4f(b"proj\0",&camera.proj_mat().to_cols_array()[0]);
@@ -247,10 +257,10 @@ impl Entity {
 
         gl::ActiveTexture(gl::TEXTURE0);
         gl::BindTexture(gl::TEXTURE_2D, texture_id);
-        
         gl::BindVertexArray(self.vao);
-
+        // gl::DrawElements(gl::TRIANGLES, 1, gl::UNSIGNED_INT, 0 as *const _);
         gl::DrawArrays(gl::TRIANGLES, 0, self.mesh.vertices_normals.len() as i32);
+
 
     }
     pub fn closest_vertex_index(&mut self, xz: Vec2) -> usize {

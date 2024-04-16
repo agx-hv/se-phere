@@ -222,7 +222,7 @@ async fn game(socket: &UdpSocket,
     let mut myscore = 0;
     let mut myhealth = 3;
 
-    //let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
 
     // initializing entities as Entity
     let mut player = Player::new(
@@ -593,14 +593,14 @@ async fn game(socket: &UdpSocket,
                 myscore += 1;
                 let mut path = ["assets/mesh/",&myscore.to_string(),".stl"].join("");
                 myscore_entity.mesh = Mesh::new(&path, vec3a(1.0,1.0,1.0));
-                //music::play("assets/oof.mp3",&stream_handle);
+                music::play("assets/oof.mp3",&stream_handle);
             } else {
                 myhealth -= 1;
                 if myhealth == 0 { break; }
                 myhearts.pop();
                 let mut path = ["assets/mesh/",&myscore.to_string(),".stl"].join("");
                 myscore_entity.mesh = Mesh::new(&path, vec3a(1.0,1.0,1.0));
-                //music::play("assets/oof.mp3",&stream_handle);
+                music::play("assets/oof.mp3",&stream_handle);
             }
         }
 

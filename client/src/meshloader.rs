@@ -11,14 +11,14 @@ pub struct Mesh {
     pub vertices_normals: Vec<Vec3A>,
     pub faces: Vec<IndexedTriangle>,
     pub vertices: Vec<Vec3A>,
-    pub tex_coords: Vec<Vec2>, // New field for texture coordinates
+    pub vertices_normals_tex: Vec<Vec3A>, // New field for texture coordinates
 }
 
 impl Mesh {
     pub fn new(path: &str, scale: Vec3A) -> Self {
         let mut vertices_normals = Vec::new();
         let mut vertices = Vec::new();
-        let mut tex_coords = Vec::new(); // Initialize texture coordinates vector
+        let mut vertices_normals_tex = Vec::new(); // Initialize texture coordinates vector
 
         let mut file = OpenOptions::new().read(true).open(path).unwrap();
         let mesh = stl_io::read_stl(&mut file).unwrap();
@@ -30,13 +30,6 @@ impl Mesh {
             vertices.push(vec3a(x,y,z));
         }
 
-        // Calculate texture coordinates based on vertex positions
-        for v in &vertices {
-            let u = v.x * 100.0; // Example: Using x-coordinate as texture U coordinate
-            let v = v.z * 100.0; // Example: Using y-coordinate as texture V coordinate
-            tex_coords.push(vec2(u, v));
-        }
-
         for face in &mesh.faces {
             let n = vec3a(face.normal[0], face.normal[1], face.normal[2]);
             for i in face.vertices {
@@ -45,20 +38,39 @@ impl Mesh {
                     vec3a(scale[0]*v[0], scale[1]*v[1], scale[2]*v[2])
                 );
                 vertices_normals.push(n);
+                // Calculate texture coordinates based on vertex positions
+                let u = v[0]; // Example: Using x-coordinate as texture U coordinate
+                let v = v[2]; // Example: Using y-coordinate as texture V coordinate
+            }
+
+        }
+        for face in &mesh.faces {
+            let n = vec3a(face.normal[0], face.normal[1], face.normal[2]);
+            for i in face.vertices {
+                let v = &mesh.vertices[i as usize];
+                vertices_normals_tex.push(
+                    vec3a(scale[0]*v[0], scale[1]*v[1], scale[2]*v[2])
+                );
+                vertices_normals_tex.push(n);
+                // Calculate texture coordinates based on vertex positions
+                let u = v[0]; // Example: Using x-coordinate as texture U coordinate
+                let v = v[2]; // Example: Using y-coordinate as texture V coordinate
+                vertices_normals_tex.push(vec3a(u, v, 0.0));
             }
         }
+        
 
         Mesh {
             path: String::from(path),
             vertices_normals,
             faces: mesh.faces,
             vertices,
-            tex_coords, // Assign texture coordinates to the struct field
+            vertices_normals_tex, // Assign texture coordinates to the struct field
         }
     }
     pub fn vertices_flattened(&self) -> Vec<f32> {
         let mut v = vec!();
-        for vertex in &self.vertices_normals {
+        for vertex in &self.vertices_normals_tex {
             v.extend_from_slice(&mut vertex.to_array().as_slice());
         }
         v

@@ -17,4 +17,10 @@ Rust OpenGL sephere game
 1. get IP with ipconfig
 2. ``` cargo run --bin server --release ``` or run RunServer.sh
 3. set SERVER_IP_ADDR (line 42) in clinet\src\main.rs to ip address, changing '.' to ','
-4. ``` cargo run --bin client --release ``` or run RunClient.sh
+4. ``` cargo run --bin title --release ``` or run RunClient.sh
+
+## Instructions
+
+```w``` or ```s``` to move forward and backward respectively
+```a``` or ```d``` to turn left and right
+```space``` to jump  
