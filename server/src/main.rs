@@ -138,7 +138,7 @@ impl Server {
                                     socket.send_to(v.as_slice(), &peer).await?;
                                     player_buffers[pid as usize] = None; 
                                 } else {
-                                    socket.send_to(&[], &peer).await?;
+                                    //socket.send_to(&[], &peer).await?;
                                 }
                             } else {
                                 println!("Invalid payload for command: {:?} (0x{:02x})", m.command, b[0]);

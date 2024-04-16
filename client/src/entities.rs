@@ -19,6 +19,7 @@ pub struct Ability {
     pub ground_mut_power: f32,
 }
 
+#[derive(Debug)]
 pub struct Entity {
     pub mesh: Mesh,
     pub pos: Vec3A,

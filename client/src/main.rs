@@ -23,7 +23,8 @@ use tokio::net::{UdpSocket, TcpStream, TcpListener};
 use tokio::io::ErrorKind;
 use messaging::{Message, Command, AsBytes};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, AtomicU64, Ordering};
+use std::collections::VecDeque;
 
 const DELTA_TIME: time::Duration = time::Duration::from_millis(16);
 const ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0);
@@ -46,6 +47,23 @@ const SERVER_SOCKET: SocketAddr = SocketAddr::new(SERVER_IP_ADDR, SERVER_PORT);
 async fn main() -> tokio::io::Result<()> {
     let counter = Arc::new(AtomicU64::new(0));
     let num_players = Arc::new(AtomicU8::new(0));
+    let mut player_positions = vec!();
+    for i in 0..64 {
+        player_positions.push((Arc::new(AtomicU8::new(255)),
+                              Arc::new(AtomicU32::new(0)),
+                              Arc::new(AtomicU32::new(0)),
+                              Arc::new(AtomicU32::new(0))
+        ));
+    }
+    let mut gnd_muts = vec!();
+    gnd_muts.push((Arc::new(AtomicU32::new(0)),
+                        Arc::new(AtomicU32::new(64))
+    ));
+    for i in 1..64 {
+        gnd_muts.push((Arc::new(AtomicU32::new(0)),
+                            Arc::new(AtomicU32::new(0))
+        ));
+    }
     // Create UDP socket
     let socket = UdpSocket::bind(LOCAL_IP_ADDR.to_string()+":0").await?;
     let socket2 = UdpSocket::bind(LOCAL_IP_ADDR.to_string()+":0").await?;
@@ -76,8 +94,23 @@ async fn main() -> tokio::io::Result<()> {
             let pid = m.extract_u8(0).unwrap();
             dbg!(&pid);
             tokio::join!(
-                game(&socket, &socket2, counter.clone(), &listener, pid, num_players.clone()),
-                listen(&socket, counter.clone(), num_players.clone(), pid)
+                game(&socket,
+                    &socket2,
+                    counter.clone(),
+                    &listener,
+                    pid,
+                    num_players.clone(),
+                    gnd_muts.clone(),
+                    player_positions.clone()
+                    ),
+
+                listen(&socket,
+                       counter.clone(),
+                       num_players.clone(),
+                       pid,
+                       gnd_muts.clone(),
+                       player_positions.clone()
+                       ),
             );
         }
 		_ => {dbg!(&m); },
@@ -87,9 +120,24 @@ async fn main() -> tokio::io::Result<()> {
     Ok(())
 }
 
-async fn listen(socket: &UdpSocket, counter: Arc<AtomicU64>, num_players: Arc<AtomicU8>, pid: u8) -> tokio::io::Result<()> {
+async fn listen(socket: &UdpSocket,
+                counter: Arc<AtomicU64>,
+                num_players: Arc<AtomicU8>,
+                pid: u8,
+                gnd_muts: Vec<(Arc<AtomicU32>, Arc<AtomicU32>)>,
+                player_positions: Vec<(Arc<AtomicU8>, Arc<AtomicU32>, Arc<AtomicU32>, Arc<AtomicU32>)>
+                ) -> tokio::io::Result<()> {
+
     loop {
         let mut m = Message::new(Command::STATE);
+        m.push_bytes(pid.as_bytes());
+        socket.send(&m.get_bytes()).await?;
+
+        let mut m = Message::new(Command::PPOS);
+        m.push_bytes(pid.as_bytes());
+        socket.send(&m.get_bytes()).await?;
+
+        let mut m = Message::new(Command::GNDSTATE);
         m.push_bytes(pid.as_bytes());
         socket.send(&m.get_bytes()).await?;
 
@@ -102,7 +150,29 @@ async fn listen(socket: &UdpSocket, counter: Arc<AtomicU64>, num_players: Arc<At
                 let num_mutations = m.extract_u64(1).unwrap();
                 if counter.load(Ordering::Relaxed) < num_mutations {
                     counter.store(num_mutations,Ordering::Relaxed);
-                    println!("{:?}", counter);
+                    //println!("{:?}", counter);
+                }
+            },
+            Command::R_PPOS => { 
+                if let Some(np) = m.extract_u8(0) {
+                    for idx in 0..np {
+                        if let Some(ppos) = m.extract_vec3a((12*idx+1).into()) {
+                            let (i,x,y,z) = &player_positions[idx as usize];
+                            i.store(idx.into(), Ordering::Relaxed);
+                            x.store(ppos.x.to_bits().into(), Ordering::Relaxed);
+                            y.store(ppos.y.to_bits().into(), Ordering::Relaxed);
+                            z.store(ppos.z.to_bits().into(), Ordering::Relaxed);
+                        }
+                    }
+                }
+            },
+            Command::MUT => { 
+                if let Some(amt) = m.extract_f32(5) {
+                    let idx = m.extract_u32(1).unwrap();
+                    let (i,a) = &gnd_muts[1];
+                    i.store(idx.into(), Ordering::Relaxed);
+                    a.store(amt.to_bits().into(), Ordering::Relaxed);
+                    //dbg!(&gnd_muts[1]);
                 }
             },
             _ => {dbg!(&m); },
@@ -110,14 +180,21 @@ async fn listen(socket: &UdpSocket, counter: Arc<AtomicU64>, num_players: Arc<At
     }
 }
 
-async fn game(socket: &UdpSocket, socket2: &UdpSocket, counter: Arc<AtomicU64>, listener: &UdpSocket, pid: u8, num_players: Arc<AtomicU8>) -> tokio::io::Result<()> {
-    let mut icounter = 0u64;
+async fn game(socket: &UdpSocket,
+              socket2: &UdpSocket,
+              counter: Arc<AtomicU64>,
+              listener: &UdpSocket,
+              pid: u8,
+              num_players: Arc<AtomicU8>,
+              gnd_muts: Vec<(Arc<AtomicU32>, Arc<AtomicU32>)>,
+              player_positions: Vec<(Arc<AtomicU8>, Arc<AtomicU32>, Arc<AtomicU32>, Arc<AtomicU32>)>
+              ) -> tokio::io::Result<()> {
+
     let mut scr_w = 1920i32;
     let mut scr_h = 1080i32;
-    let mut framenum = 0u64;
-    let mut cube_respawn_frame = 0u64;
     
     let mut rng = thread_rng();
+
 
     let theta = rng.gen_range(0.0..2.0*PI);
     let player_init_pos = vec3a(PLAYER_SPAWN_RADIUS*f32::cos(theta), 0.1, PLAYER_SPAWN_RADIUS*f32::sin(theta));
@@ -270,7 +347,16 @@ async fn game(socket: &UdpSocket, socket2: &UdpSocket, counter: Arc<AtomicU64>, 
 
 
     while !window.should_close() {
-        if num_players.load(Ordering::Relaxed) > other_player_entities.len() as u8 {
+        let pvec = &player_positions;
+        let gvec = &gnd_muts;
+
+        let mut np = 0;
+        for p in pvec {
+            if p.0.load(Ordering::Relaxed) == 255 { break; }
+            np += 1;
+        }
+
+        if np > other_player_entities.len() as u8 {
             let mut newplayer = Entity::new(
                 "assets/mesh/sephere.stl",
                 ORIGIN,
@@ -280,9 +366,28 @@ async fn game(socket: &UdpSocket, socket2: &UdpSocket, counter: Arc<AtomicU64>, 
             unsafe { newplayer.gl_init();}
             other_player_entities.push(newplayer);
         }
-        
-        
 
+        let mut offset = 0;
+        for p in pvec {
+            let pid = p.0.load(Ordering::Relaxed);
+            if pid == 255 { break; }
+            if pid == player.player_id { continue; }
+            let (_, ux, uy, uz) = p;
+            let x = f32::from_bits(ux.load(Ordering::Relaxed));
+            let y = f32::from_bits(uy.load(Ordering::Relaxed));
+            let z = f32::from_bits(uz.load(Ordering::Relaxed));
+            other_player_entities[pid as usize].pos = vec3a(x,y,z);
+        }
+        let (i,a) = &gvec[1];
+        ground.mesh.mutate(i.load(Ordering::Relaxed) as usize, vec3a(0.0,1.0,0.0), f32::from_bits(a.load(Ordering::Relaxed)));
+        i.store(0, Ordering::Relaxed);
+        a.store(0, Ordering::Relaxed);
+
+        
+        //dbg!(&pvec[0..2]);
+        //dbg!(&np);
+        //dbg!(&other_player_entities.len());
+        
         glfw.poll_events();
         window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
         for (_, event) in glfw::flush_messages(&events) {
@@ -361,24 +466,6 @@ async fn game(socket: &UdpSocket, socket2: &UdpSocket, counter: Arc<AtomicU64>, 
 
             ground.draw(&mut player.camera, &lighting_program);
 
-            /* Debug raycasting using ground vertex markers 
-            let mut j = 0 as usize;
-            for marker in &mut ground_vertex_markers {
-                if i==j {
-                    if keystates[10] == 1 && keystates[11] == 0 {
-                        marker.set_color(vec3a(0.8, 0.2, 0.0));
-                    }
-                    if keystates[10] == 0 && keystates[11] == 1 {
-                        marker.set_color(vec3a(0.8, 0.2, 0.8));
-                    }
-                } else {
-                    marker.set_color(vec3a(0.1,0.8,0.1));
-                }
-                marker.draw(&mut player.camera, &lighting_program);
-                j += 1;
-            }
-            */
-            
             goal.draw(&mut player.camera, &lighting_program);
             for pe in &mut other_player_entities {
                 pe.draw(&mut player.camera, &lighting_program);
@@ -390,18 +477,6 @@ async fn game(socket: &UdpSocket, socket2: &UdpSocket, counter: Arc<AtomicU64>, 
                 (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*f32::sin(player.camera.camera_angle), 0.0, // use camera angle as direction
                 (keystates[0]-keystates[2]) as f32*-MOVEMENT_DELTA*f32::cos(player.camera.camera_angle))); // for the player to move towards
         player.mvhelper(); 
-
-        /*
-        if framenum == cube_respawn_frame {
-            let theta2 = rng.gen_range(0.0..2.0*PI);
-            let cube_r = rng.gen_range(2.0..=CUBE_SPAWN_RADIUS);
-            cube2.pos = vec3a(cube_r*f32::cos(theta2), -0.05, cube_r*f32::sin(theta2));
-            let R = rng.gen_range(0.0..1.0);
-            let G = rng.gen_range(0.0..1.0);
-            let B = rng.gen_range(0.0..1.0);
-            cube2.color = vec3a(R,G,B);
-        }
-        */
 
         if player.detect_col(&goal).0 || player.entity.pos.y < -5.0 {
             let theta = rng.gen_range(0.0..2.0*PI);
@@ -436,53 +511,12 @@ async fn game(socket: &UdpSocket, socket2: &UdpSocket, counter: Arc<AtomicU64>, 
             player.camera.tilt += CAMERA_DELTA;
         }
 
-
         // socket
         let p = player.pos_cmd();
         socket.send(&p).await?;
 
-        let mut m = Message::new(Command::PPOS);
-        m.push_bytes(player.player_id.as_bytes());
-        socket2.send(&m.get_bytes()).await?;
 
-        let mut buf = vec![0; 1024];
 
-        let (size, peer) = socket2.recv_from(&mut buf).await?;
-        let m = Message::try_from_data(peer, &buf[..size]).unwrap();
-        match m.command {
-            Command::R_PPOS => { 
-                for i in 0..m.extract_u8(0).unwrap() as usize {
-                    if pid != i as u8 {
-                        if let Some(ppos) = m.extract_vec3a(1+12*i) {
-                            if i < other_player_entities.len() {
-                                other_player_entities[i].pos = ppos;
-                            }
-                        }
-                    }
-                }
-            },
-            _ => {dbg!(&m); },
-        }
-
-        if icounter < counter.load(Ordering::Relaxed) {
-            let mut m = Message::new(Command::GNDSTATE);
-            m.push_bytes(player.player_id.as_bytes());
-            listener.send(&m.get_bytes()).await?;
-            let mut buf = vec![0; 1024];
-            let (size, peer) = listener.recv_from(&mut buf).await?;
-            if let Some(m) = Message::try_from_data(peer, &buf[..size]) {
-				match m.command {
-					Command::MUT => { 
-						let amt = m.extract_f32(5).unwrap();
-						let idx = m.extract_u32(1).unwrap();
-						ground.mesh.mutate(idx as usize,vec3a(0.0,1.0,0.0),amt);
-						icounter += 1;
-						dbg!(icounter);
-					},
-					_ => {dbg!(&m); },
-				}
-			}
-        }
 
         if player.detect_col(&ground).0 {
             player.collide(&ground);
@@ -496,7 +530,6 @@ async fn game(socket: &UdpSocket, socket2: &UdpSocket, counter: Arc<AtomicU64>, 
 
         window.swap_buffers();
         tokio::time::sleep(DELTA_TIME).await;
-        framenum += 1;
         //dbg!(player.on_ground);
 
     }
