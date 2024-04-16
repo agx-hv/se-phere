@@ -70,6 +70,8 @@ async fn main() -> tokio::io::Result<()> {
         ));
     }
     
+    let _ = title::gameover();
+
     let _ = title::main();
 
     let str_ip = title::read_ip_from_file("ip.txt").unwrap_or_else(|err| {
