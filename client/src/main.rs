@@ -39,7 +39,7 @@ const CUBE_SPAWN_RADIUS: f32 = 5.0;
 const CUBE_RESPAWN_TIME: u64 = 60;
 const MAX_LIGHTS: usize = 16;
 const LOCAL_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
-const SERVER_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(132,147,124,62));
+const SERVER_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(192,168,1,109));
 const SERVER_PORT: u16 = 42069;
 const SERVER_SOCKET: SocketAddr = SocketAddr::new(SERVER_IP_ADDR, SERVER_PORT);
 
@@ -192,6 +192,7 @@ async fn game(socket: &UdpSocket,
 
     let mut scr_w = 1920i32;
     let mut scr_h = 1080i32;
+    let mut framenum = 0u64;
     
     let mut rng = thread_rng();
 
@@ -209,6 +210,14 @@ async fn game(socket: &UdpSocket,
 		pid,
     );
 
+    let mut pixel = Entity::new(
+        "assets/mesh/rt_marker.stl",
+        ORIGIN,
+        1.0*vec3a(0.2, 0.2, 0.2),
+        1.0,
+    );
+    pixel.set_scale(0.001,0.001,0.001);
+
     let mut goal = Entity::new(
         "assets/mesh/rt_marker.stl",
         ORIGIN + vec3a(0.0,0.0,0.0),
@@ -222,7 +231,6 @@ async fn game(socket: &UdpSocket,
     let cube_pos = vec3a(cube_r*f32::cos(theta2), -0.5, cube_r*f32::sin(theta2));
 
     let mut other_player_entities = vec!();
-
     for _ in 0..=pid {
         let mut newplayer = Entity::new(
             "assets/mesh/sephere.stl",
@@ -230,9 +238,21 @@ async fn game(socket: &UdpSocket,
             vec3a(0.8, 0.1, 0.8),
             1.0,
         );
-        other_player_entities.push(newplayer);
+        let mut score = Entity::new(
+            "assets/mesh/3.stl",
+            ORIGIN,
+            vec3a(0.8, 0.1, 0.8),
+            1.0,
+        );
+        other_player_entities.push((newplayer,score));
     }
 
+    let mut myscore = Entity::new(
+        "assets/mesh/0.stl",
+        ORIGIN,
+        vec3a(0.8, 0.1, 0.8),
+        1.0,
+    );
 
     let players_pos = [vec3a(0.0,0.0,0.0); 64];
 
@@ -331,12 +351,14 @@ async fn game(socket: &UdpSocket,
         lighting_program.set_vec3fv(b"lightPos\0", MAX_LIGHTS, &light_positions[0]);
 
         player.entity.gl_init();
-        for pe in &mut other_player_entities {
+        for (pe,score) in &mut other_player_entities {
             pe.gl_init();
+            score.gl_init();
         }
         goal.gl_init();
         ground.gl_init();
         rt_marker.gl_init();
+        pixel.gl_init();
 
         /* initialize ground vertex marker cubes
            for marker in &mut ground_vertex_markers {
@@ -347,6 +369,8 @@ async fn game(socket: &UdpSocket,
 
 
     while !window.should_close() {
+
+        framenum += 1;
         let pvec = &player_positions;
         let gvec = &gnd_muts;
 
@@ -363,8 +387,14 @@ async fn game(socket: &UdpSocket,
                 vec3a(0.8, 0.1, 0.8),
                 1.0,
             );
-            unsafe { newplayer.gl_init();}
-            other_player_entities.push(newplayer);
+            let mut score = Entity::new(
+                "assets/mesh/3.stl",
+                ORIGIN,
+                vec3a(0.8, 0.1, 0.8),
+                1.0,
+            );
+            unsafe { newplayer.gl_init(); score.gl_init(); }
+            other_player_entities.push((newplayer,score));
         }
 
         let mut offset = 0;
@@ -376,8 +406,11 @@ async fn game(socket: &UdpSocket,
             let x = f32::from_bits(ux.load(Ordering::Relaxed));
             let y = f32::from_bits(uy.load(Ordering::Relaxed));
             let z = f32::from_bits(uz.load(Ordering::Relaxed));
-            other_player_entities[pid as usize].pos = vec3a(x,y,z);
+            other_player_entities[pid as usize].0.pos = vec3a(x,y,z);
+            other_player_entities[pid as usize].1.pos = vec3a(x,y,z) + vec3a(0.0,0.3,0.0);
         }
+
+
         let (i,a) = &gvec[1];
         ground.mesh.mutate(i.load(Ordering::Relaxed) as usize, vec3a(0.0,1.0,0.0), f32::from_bits(a.load(Ordering::Relaxed)));
         i.store(0, Ordering::Relaxed);
@@ -460,15 +493,19 @@ async fn game(socket: &UdpSocket,
 
         unsafe {
 
+
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
             player.entity.draw(&mut player.camera, &lighting_program);
 
             ground.draw(&mut player.camera, &lighting_program);
 
+            pixel.draw(&mut player.camera, &lighting_program);
+
             goal.draw(&mut player.camera, &lighting_program);
-            for pe in &mut other_player_entities {
+            for (pe,score) in &mut other_player_entities {
                 pe.draw(&mut player.camera, &lighting_program);
+                score.draw(&mut player.camera, &lighting_program);
             }
         }
         
@@ -523,11 +560,21 @@ async fn game(socket: &UdpSocket,
 
         for i in 0..other_player_entities.len() {
             if i != player.player_id.into() {
-                if player.detect_col(&other_player_entities[i]).0 {
-                    player.collide(&other_player_entities[i]);
+                if player.detect_col(&other_player_entities[i].0).0 {
+                    player.collide(&other_player_entities[i].0);
                 }
             }
+            other_player_entities[i].1.mesh.rotate_y(0.15*framenum as f32);
         }
+
+
+
+        let eye = player.camera.eye();
+        let forward = (player.pos()-player.camera.eye()).normalize();
+        let up = player.camera.up();
+        let right = forward.cross(up);
+        pixel.pos = player.camera.eye() + forward*0.02 - right*0.01 - up*0.01 ;
+
 
         window.swap_buffers();
         tokio::time::sleep(DELTA_TIME).await;

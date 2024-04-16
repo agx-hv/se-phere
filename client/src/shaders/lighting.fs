@@ -30,7 +30,7 @@ void main()
     }
     vec3 result = (ambient + diffuse) * objectColor;
 
-    FragColor = vec4(result, 1.0) *texture(ourTexture, FragPos);
+    FragColor = vec4(result, 1.0);// *texture(ourTexture, FragPos);
 
     // vec3 ambient = vec3(0.1, 0.1, 0.1); // Ambient lighting
     // vec3 lightDir = normalize(vec3(0.0,  1.0, 0.0)); // Example light direction

@@ -1,9 +1,7 @@
 extern crate stl_io;
 extern crate glam;
-use glam::vec3a;
-use glam::vec2;
-use glam::f32::Vec3A;
-use glam::f32::Vec2;
+use glam::{vec3a,vec2};
+use glam::f32::{Vec3A,Vec2,Mat3A};
 use stl_io::IndexedTriangle;
 use std::fs::OpenOptions;
 
@@ -103,6 +101,30 @@ impl Mesh {
                 let v = &self.vertices[i as usize];
                 self.vertices_normals.push(
                     vec3a(v[0], v[1], v[2])
+                );
+                self.vertices_normals.push(n);
+            }
+        }
+    }
+    pub fn rotate_y(&mut self, theta: f32) {
+        let ry = Mat3A::from_rotation_y(theta);
+        for mut v in &self.vertices {
+            v = &(ry**v);
+        }
+        self.vertices_normals = vec!();
+        for face in &mut self.faces {
+            let n: Vec3A;
+            let mut triangle_verts = [vec3a(0.0,0.0,0.0);3];
+            for i in 0..3 {
+                let v = &self.vertices[face.vertices[i] as usize];
+                triangle_verts[i] = ry*vec3a(v[0], v[1], v[2]);
+            }
+            n = (triangle_verts[1]-triangle_verts[0]).cross(triangle_verts[2]-triangle_verts[0]).normalize();
+            face.normal = stl_io::Vector::new([n.x,n.y,n.z]);
+            for i in face.vertices {
+                let v = &self.vertices[i as usize];
+                self.vertices_normals.push(
+                    ry*vec3a(v[0], v[1], v[2])
                 );
                 self.vertices_normals.push(n);
             }
