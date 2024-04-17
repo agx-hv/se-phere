@@ -40,8 +40,8 @@ use std::collections::VecDeque;
 
 const DELTA_TIME: time::Duration = time::Duration::from_millis(1);
 const ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0);
-const MOVEMENT_DELTA: f32 = 0.002;
-const CAMERA_DELTA: f32 = 0.015;
+const MOVEMENT_DELTA: f32 = 0.005;
+const CAMERA_DELTA: f32 = 0.03;
 const PAN_TRESHOLD_RATIO:f64=0.01; //how close to the edge before panning
 const TILT_TRESHOLD_RATIO:f64=0.01; //how close to the edge before tilting
 const ZOOM_DELTA:f32 = 0.1;
@@ -706,7 +706,7 @@ fn handle_window_event(glfw: &mut glfw::Glfw, window: &mut glfw::Window, event: 
         glfw::WindowEvent::Key(glfw::Key::Space, _, glfw::Action::Press, _) => {
             if player.on_ground {
                 player.on_ground = false;
-                player.vec.y += 0.06;
+                player.vec.y += 0.1;
             }
         }
         glfw::WindowEvent::Key(key,_,action,modifier) =>{
