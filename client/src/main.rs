@@ -1,11 +1,12 @@
-#![allow(non_snake_case)]
-#![allow(unused_mut)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
-use gl::types::GLint;
+// #![allow(non_snake_case)]
+// #![allow(unused_mut)]
+// #![allow(unused_variables)]
+// #![allow(unused_imports)]
+
+//imports
 use glam::{vec3a, vec4};
 use glam::Vec3Swizzles;
-use glam::f32::{Vec3,Vec3A};
+use glam::f32::Vec3A;
 use glfw::Context;
 use glfw::Cursor;
 use glfw::StandardCursor::*;
@@ -16,27 +17,21 @@ pub mod meshloader;
 pub mod entities; 
 use entities::*;
 pub mod keys;
-use std::{str, thread, time, f32::consts::PI};
+use std::{time, f32::consts::PI};
 use rand::*;
 use crate::meshloader::Mesh;
-
-use std::fs::File;
-use std::io::{self, BufRead};
 use std::env;
 use rand::rngs::ThreadRng;
 
 // sound
 pub mod music;
-use rodio::OutputStream;
 
 // net, tokio, messaging
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use tokio::net::{UdpSocket, TcpStream, TcpListener};
-use tokio::io::ErrorKind;
+use tokio::net::UdpSocket;
 use messaging::{Message, Command, AsBytes};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, AtomicU64, Ordering};
-use std::collections::VecDeque;
+use std::sync::atomic::{ AtomicU8, AtomicU32, AtomicU64, Ordering};
 
 const DELTA_TIME: time::Duration = time::Duration::from_millis(1);
 const ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0);
@@ -47,8 +42,8 @@ const TILT_TRESHOLD_RATIO:f64=0.01; //how close to the edge before tilting
 const ZOOM_DELTA:f32 = 0.1;
 const GROUND_IMMUTABLE_RADIUS: f32 = 1.5;
 const PLAYER_SPAWN_RADIUS: f32 = 10.0;
-const CUBE_SPAWN_RADIUS: f32 = 5.0;
-const CUBE_RESPAWN_TIME: u64 = 60;
+// const CUBE_SPAWN_RADIUS: f32 = 5.0;
+// const CUBE_RESPAWN_TIME: u64 = 60;
 const MAX_LIGHTS: usize = 16;
 const LOCAL_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 const SERVER_PORT: u16 = 42069;
@@ -59,7 +54,7 @@ async fn main() -> tokio::io::Result<()> {
     let counter = Arc::new(AtomicU64::new(0));
     let num_players = Arc::new(AtomicU8::new(0));
     let mut player_positions = vec!();
-    for i in 0..64 {
+    for _ in 0..64 {
         player_positions.push((Arc::new(AtomicU8::new(255)),
                               Arc::new(AtomicU32::new(0)),
                               Arc::new(AtomicU32::new(0)),
@@ -70,7 +65,7 @@ async fn main() -> tokio::io::Result<()> {
     gnd_muts.push((Arc::new(AtomicU32::new(0)),
                         Arc::new(AtomicU32::new(64))
     ));
-    for i in 1..64 {
+    for _ in 1..64 {
         gnd_muts.push((Arc::new(AtomicU32::new(0)),
                             Arc::new(AtomicU32::new(0))
         ));
@@ -81,18 +76,16 @@ async fn main() -> tokio::io::Result<()> {
         args.push(arg);
     }
 
-    let SERVER_SOCKET: SocketAddr = SocketAddr::new(args[1].parse().expect(&format!("Invalid IP: {}", args[1]).to_string()), SERVER_PORT);
-    //dbg!(&SERVER_SOCKET);
+    let server_socket: SocketAddr = SocketAddr::new(args[1].parse().expect(&format!("Invalid IP: {}", args[1]).to_string()), SERVER_PORT);
 
-    
     // Create UDP socket
     let socket = UdpSocket::bind(LOCAL_IP_ADDR.to_string()+":0").await?;
     let socket2 = UdpSocket::bind(LOCAL_IP_ADDR.to_string()+":0").await?;
-    socket.connect(SERVER_SOCKET).await?;
-    socket2.connect(SERVER_SOCKET).await?;
+    socket.connect(server_socket).await?;
+    socket2.connect(server_socket).await?;
 
     let listener = UdpSocket::bind(LOCAL_IP_ADDR.to_string()+":0").await?;
-    listener.connect(SERVER_SOCKET).await?;
+    listener.connect(server_socket).await?;
 
     let SocketAddr::V4(v4) = &listener.local_addr().unwrap() else {
         unreachable!()
@@ -252,19 +245,19 @@ async fn game(socket: &UdpSocket,
     );
     goal.set_scale(2.0,2.0,2.0);
 
-    let theta2 = rng.gen_range(0.0..2.0*PI);
-    let cube_r = rng.gen_range(2.0..=CUBE_SPAWN_RADIUS);
-    let cube_pos = vec3a(cube_r*f32::cos(theta2), -0.5, cube_r*f32::sin(theta2));
+    // let theta2 = rng.gen_range(0.0..2.0*PI);
+    // let cube_r = rng.gen_range(2.0..=CUBE_SPAWN_RADIUS);
+    // let cube_pos = vec3a(cube_r*f32::cos(theta2), -0.5, cube_r*f32::sin(theta2));
 
     let mut other_player_entities = vec!();
-    for i in 0..pid {
-        let mut newplayer = Entity::new(
+    for _ in 0..pid {
+        let newplayer = Entity::new(
             "assets/mesh/small_sphere.stl",
             ORIGIN,
             randcolor(&mut rng),
             1.0,
         );
-        let mut score = Entity::new(
+        let score = Entity::new(
             "assets/mesh/3.stl",
             ORIGIN,
             ENEMY_COLOR,
@@ -308,7 +301,7 @@ async fn game(socket: &UdpSocket,
         myhearts.push(myhealth_entity);
     }
 
-    let players_pos = [vec3a(0.0,0.0,0.0); 64];
+    // let players_pos = [vec3a(0.0,0.0,0.0); 64];
 
     let mut ground = Entity::new(
         "assets/mesh/ground.stl",
@@ -429,7 +422,7 @@ async fn game(socket: &UdpSocket,
        */
     }
 
-
+    //loop
     while !window.should_close() {
 
         framenum += 1;
@@ -459,7 +452,7 @@ async fn game(socket: &UdpSocket,
             other_player_entities.push((newplayer,score));
         }
 
-        let mut offset = 0;
+        // let mut offset = 0;
         for p in pvec {
             let pid = p.0.load(Ordering::Relaxed);
             if pid == 255 { break; }
@@ -554,8 +547,6 @@ async fn game(socket: &UdpSocket,
 
 
         unsafe {
-
-
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
             player.entity.draw(&mut player.camera, &lighting_program, false);
@@ -569,7 +560,7 @@ async fn game(socket: &UdpSocket,
             for e in &mut myhearts {
                 e.draw(&mut player.camera, &lighting_program,false);
             }
-            for (pe,score) in &mut other_player_entities {
+            for (pe,_score) in &mut other_player_entities {
                 pe.draw(&mut player.camera, &lighting_program,false);
                 //score.draw(&mut player.camera, &lighting_program,false);
             }
@@ -596,14 +587,14 @@ async fn game(socket: &UdpSocket,
                     break;
                 }
                 myscore += 1;
-                let mut path = ["assets/mesh/",&myscore.to_string(),".stl"].join("");
+                let path = ["assets/mesh/",&myscore.to_string(),".stl"].join("");
                 myscore_entity.mesh = Mesh::new(&path, vec3a(1.0,1.0,1.0));
                 //music::play("assets/oof.mp3",&stream_handle);
             } else {
                 myhealth -= 1;
                 if myhealth == 0 { break; }
                 myhearts.pop();
-                let mut path = ["assets/mesh/",&myscore.to_string(),".stl"].join("");
+                let path = ["assets/mesh/",&myscore.to_string(),".stl"].join("");
                 myscore_entity.mesh = Mesh::new(&path, vec3a(1.0,1.0,1.0));
                 //music::play("assets/oof.mp3",&stream_handle);
             }
@@ -658,7 +649,7 @@ async fn game(socket: &UdpSocket,
         }
 
 
-        let eye = player.camera.eye();
+        // let eye = player.camera.eye();
         let forward = (player.pos()-player.camera.eye()).normalize();
         let up = player.camera.up();
         let right = forward.cross(up);

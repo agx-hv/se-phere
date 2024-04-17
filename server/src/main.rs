@@ -1,7 +1,7 @@
 use std::error::Error;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::SocketAddr;
 use std::{env, io};
-use tokio::net::{UdpSocket, TcpStream};
+use tokio::net::UdpSocket;
 use glam::*;
 use messaging::{Message, Command, AsBytes};
 
