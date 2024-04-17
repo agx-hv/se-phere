@@ -191,31 +191,11 @@ impl Entity {
 
 
 
-    pub unsafe fn draw(&mut self, camera: &mut PlayerCamera, lighting_program: &ShaderProgram) {
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as GLint);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
-        let texture = image::open("assets/rock_texture.jpg").expect("Failed to load texture image").flipv().to_rgb8();
-        let mut texture_id = 0;
-        let (width,height) = texture.dimensions();
-        gl::GenTextures(1, &mut texture_id);
-        gl::BindTexture(gl::TEXTURE_2D, texture_id);
-        gl::TexImage2D(
-            gl::TEXTURE_2D,
-            0,
-            gl::RGB as i32,
-            width as GLint,
-            height as GLint,
-            0,
-            gl::RGB,
-            gl::UNSIGNED_BYTE,
-            texture.as_ptr() as *const _,
-        );
-        gl::GenerateMipmap(gl::TEXTURE_2D);
-
+    pub unsafe fn draw(&mut self, camera: &mut PlayerCamera, lighting_program: &ShaderProgram, tex_on: bool) {
         let vertices = self.mesh.vertices_flattened();
         gl::BindVertexArray(self.vao);
         gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
-        
+
         gl::BufferData(gl::ARRAY_BUFFER, 
             (vertices.len() * std::mem::size_of::<f32>()) as isize,
             vertices.as_ptr().cast(),
@@ -255,10 +235,52 @@ impl Entity {
         let objectColor = self.color * self.reflectance;
         lighting_program.set_vec3f(b"objectColor\0", objectColor[0], objectColor[1], objectColor[2]);
 
+
+        // textures
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as GLint);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
         gl::ActiveTexture(gl::TEXTURE0);
-        gl::BindTexture(gl::TEXTURE_2D, texture_id);
+        let texture0 = image::open("assets/white.jpg").expect("Failed to load texture image").flipv().to_rgb8();
+        let mut texture_id0 = 0;
+        let (width,height) = texture0.dimensions();
+        gl::GenTextures(1, &mut texture_id0);
+        gl::BindTexture(gl::TEXTURE_2D, texture_id0);
+        gl::TexImage2D(
+        gl::TEXTURE_2D,
+        0,
+        gl::RGB as i32,
+        width as GLint,
+        height as GLint,
+        0,
+        gl::RGB,
+        gl::UNSIGNED_BYTE,
+        texture0.as_ptr() as *const _,
+        );
+        let texture1 = image::open("assets/dirt.jpg").expect("Failed to load texture image").flipv().to_rgb8();
+        let mut texture_id1 = 0;
+        let (width,height) = texture1.dimensions();
+        gl::GenTextures(1, &mut texture_id1);
+        gl::BindTexture(gl::TEXTURE_2D, texture_id1);
+        gl::TexImage2D(
+        gl::TEXTURE_2D,
+        0,
+        gl::RGB as i32,
+        width as GLint,
+        height as GLint,
+        0,
+        gl::RGB,
+        gl::UNSIGNED_BYTE,
+        texture1.as_ptr() as *const _,
+        );
+        gl::GenerateMipmap(gl::TEXTURE_2D);
+        if tex_on{
+            gl::BindTexture(gl::TEXTURE_2D, texture_id1);
+        }
+        else{
+            gl::BindTexture(gl::TEXTURE_2D, texture_id0);
+        }
         gl::BindVertexArray(self.vao);
-        // gl::DrawElements(gl::TRIANGLES, 1, gl::UNSIGNED_INT, 0 as *const _);
+        gl::Uniform1i(texture_id1 as GLint,0);
         gl::DrawArrays(gl::TRIANGLES, 0, self.mesh.vertices_normals.len() as i32);
 
 

@@ -2,6 +2,7 @@
 #![allow(unused_mut)]
 #![allow(unused_variables)]
 #![allow(unused_imports)]
+use gl::types::GLint;
 use glam::{vec3a, vec4};
 use glam::Vec3Swizzles;
 use glam::f32::{Vec3,Vec3A};
@@ -383,7 +384,7 @@ async fn game(socket: &UdpSocket,
     let mut light_positions: [f32; MAX_LIGHTS*3] = [0.0; MAX_LIGHTS*3];
 
     let light_dist = 100f32;
-
+    
     for i in 0..MAX_LIGHTS {
         let theta: f32 = 2.0*PI/(MAX_LIGHTS as f32) * (i as f32);
         let (x,y,z) = (light_dist*f32::cos(theta), 50.0, light_dist*f32::sin(theta));
@@ -394,12 +395,12 @@ async fn game(socket: &UdpSocket,
         light_colors[3*i+1] = 4.0/(MAX_LIGHTS as f32);        
         light_colors[3*i+2] = 4.0/(MAX_LIGHTS as f32);        
     }
+    
 
     unsafe {
         gl::Enable(gl::DEPTH_TEST);
         gl::ClearColor(0.2, 0.3, 0.3, 1.0);
         lighting_program = ShaderProgram::new("client/src/shaders/lighting.vs", "client/src/shaders/lighting.fs");
-
         lighting_program.set_vec3fv(b"lightColor\0", MAX_LIGHTS, &light_colors[0]);
         lighting_program.set_vec3fv(b"lightPos\0", MAX_LIGHTS, &light_positions[0]);
 
@@ -554,20 +555,20 @@ async fn game(socket: &UdpSocket,
 
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-            player.entity.draw(&mut player.camera, &lighting_program);
+            player.entity.draw(&mut player.camera, &lighting_program, false);
 
-            ground.draw(&mut player.camera, &lighting_program);
+            ground.draw(&mut player.camera, &lighting_program,true);
 
-            goal_2d.draw(&mut player.camera, &lighting_program);
+            goal_2d.draw(&mut player.camera, &lighting_program,false);
 
-            goal.draw(&mut player.camera, &lighting_program);
-            myscore_entity.draw(&mut player.camera, &lighting_program);
+            goal.draw(&mut player.camera, &lighting_program,false);
+            myscore_entity.draw(&mut player.camera, &lighting_program,false);
             for e in &mut myhearts {
-                e.draw(&mut player.camera, &lighting_program);
+                e.draw(&mut player.camera, &lighting_program,false);
             }
             for (pe,score) in &mut other_player_entities {
-                pe.draw(&mut player.camera, &lighting_program);
-                score.draw(&mut player.camera, &lighting_program);
+                pe.draw(&mut player.camera, &lighting_program,false);
+                score.draw(&mut player.camera, &lighting_program,false);
             }
         }
         
