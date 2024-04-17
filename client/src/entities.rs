@@ -45,7 +45,7 @@ impl Player {
             camera,
             radius: 0.1,
             on_ground: false,
-            ability: Ability{ground_mut_power: 0.07},
+            ability: Ability{ground_mut_power: 0.03},
             player_id,
         }
     }
@@ -53,7 +53,7 @@ impl Player {
         if self.on_ground {
             self.vec += t_vec;
         }
-        const GRAV_DELTA: f32 = 0.01;
+        const GRAV_DELTA: f32 = 0.003;
         self.vec += vec3a(0.0, -GRAV_DELTA, 0.0); // gravity as vec3a.y
     }
     pub fn mvhelper(&mut self) { // function to manage velocity - self.vec

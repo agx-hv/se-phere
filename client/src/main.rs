@@ -39,8 +39,8 @@ use std::collections::VecDeque;
 
 const DELTA_TIME: time::Duration = time::Duration::from_millis(1);
 const ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0);
-const MOVEMENT_DELTA: f32 = 0.003;
-const CAMERA_DELTA: f32 = 0.02;
+const MOVEMENT_DELTA: f32 = 0.002;
+const CAMERA_DELTA: f32 = 0.015;
 const PAN_TRESHOLD_RATIO:f64=0.01; //how close to the edge before panning
 const TILT_TRESHOLD_RATIO:f64=0.01; //how close to the edge before tilting
 const ZOOM_DELTA:f32 = 0.1;
@@ -632,10 +632,8 @@ async fn game(socket: &UdpSocket,
         }
 
         // socket
-        if framenum%2 == 0 {
-            let p = player.pos_cmd();
-            socket.send(&p).await?;
-        }
+        let p = player.pos_cmd();
+        socket.send(&p).await?;
 
 
         if player.detect_col(&ground).0 {
@@ -652,7 +650,7 @@ async fn game(socket: &UdpSocket,
             other_player_entities[i].1.mesh.rotate_y(0.15*framenum as f32);
         }
 
-        myscore_entity.mesh.rotate_y(0.15*framenum as f32);
+        myscore_entity.mesh.rotate_y(0.03*framenum as f32);
 
         for e in &mut myhearts {
             e.mesh.rotate_y(player.camera.camera_angle);
@@ -707,7 +705,7 @@ fn handle_window_event(glfw: &mut glfw::Glfw, window: &mut glfw::Window, event: 
         glfw::WindowEvent::Key(glfw::Key::Space, _, glfw::Action::Press, _) => {
             if player.on_ground {
                 player.on_ground = false;
-                player.vec.y += 0.1;
+                player.vec.y += 0.06;
             }
         }
         glfw::WindowEvent::Key(key,_,action,modifier) =>{
