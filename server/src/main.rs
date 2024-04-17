@@ -51,7 +51,7 @@ impl Server {
                     //println!("Received command {:?} from {}", m.command, peer);
                     match m.command {
                         Command::LOGIN => {
-                            let mut reply = Message::new(Command::SET_PID);
+                            let mut reply = Message::new(Command::SETPID);
                             reply.push_bytes((player_sockets.len() as u8).as_bytes());
                             if let Some(port) = m.extract_u32(0) {
                                 let ls = SocketAddr::new(peer.ip(), port as u16);
@@ -65,7 +65,7 @@ impl Server {
                         Command::STATE => {
                             if let Some(_pid) = m.extract_u8(0) {
                                 //println!("PID {} wants the gamestate", pid);
-                                let mut reply = Message::new(Command::R_STATE);
+                                let mut reply = Message::new(Command::RSTATE);
                                 reply.push_bytes(self.state.num_players.as_bytes());
                                 reply.push_bytes(self.state.ground.frame.as_bytes());
                                 socket.send_to(&reply.get_bytes(), &peer).await?;
@@ -121,7 +121,7 @@ impl Server {
                         },
                         Command::PPOS => {
                             if let Some(_pid) = m.extract_u8(0) {
-                                let mut reply = Message::new(Command::R_PPOS);
+                                let mut reply = Message::new(Command::RPPOS);
                                 reply.push_bytes(self.state.num_players.as_bytes());
                                 for i in 0..self.state.num_players {
                                     if let Some(p) = self.state.players[i as usize] {

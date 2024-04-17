@@ -104,7 +104,7 @@ async fn main() -> tokio::io::Result<()> {
 	let (size, peer) = socket.recv_from(&mut buf).await?;
 	let m = Message::try_from_data(peer, &buf[..size]).unwrap();
 	match m.command {
-        Command::SET_PID => {
+        Command::SETPID => {
             let pid = m.extract_u8(0).unwrap();
             dbg!(&pid);
             tokio::join!(
@@ -159,7 +159,7 @@ async fn listen(socket: &UdpSocket,
         let (size, peer) = socket.recv_from(&mut buf).await?;
         let m = Message::try_from_data(peer, &buf[..size]).unwrap();
         match m.command {
-            Command::R_STATE => { 
+            Command::RSTATE => { 
                 num_players.store(m.extract_u8(0).unwrap(), Ordering::Relaxed);
                 let num_mutations = m.extract_u64(1).unwrap();
                 if counter.load(Ordering::Relaxed) < num_mutations {
@@ -167,7 +167,7 @@ async fn listen(socket: &UdpSocket,
                     //println!("{:?}", counter);
                 }
             },
-            Command::R_PPOS => { 
+            Command::RPPOS => { 
                 if let Some(np) = m.extract_u8(0) {
                     for idx in 0..np {
                         if let Some(ppos) = m.extract_vec3a((12*idx+1).into()) {

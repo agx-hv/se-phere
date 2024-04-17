@@ -5,7 +5,6 @@ use glam::*;
 use crate::meshloader::Mesh;
 use crate::camera::PlayerCamera;
 use crate::shader::ShaderProgram;
-use image::{GenericImageView};
 
 
 pub struct Player {
@@ -58,11 +57,11 @@ impl Player {
     }
     pub fn mvhelper(&mut self) { // function to manage velocity - self.vec
         self.entity.pos += self.vec;
-        let mut VEC_DELTA: f32 = 0.95;
+        let mut vec_delta: f32 = 0.95;
         if !self.on_ground {
-            VEC_DELTA = 0.99;
+            vec_delta = 0.99;
         }
-        self.vec *= VEC_DELTA;
+        self.vec *= vec_delta;
     }
     pub fn pos(&self) -> Vec3A {
         self.entity.pos
@@ -280,8 +279,8 @@ impl Entity {
         lighting_program.set_mat4f(b"proj\0",&camera.proj_mat().to_cols_array()[0]);
         lighting_program.set_mat4f(b"view\0",&camera.view_mat().to_cols_array()[0]);
         lighting_program.set_mat4f(b"model\0",&t_mat.to_cols_array()[0]);
-        let objectColor = self.color * self.reflectance;
-        lighting_program.set_vec3f(b"objectColor\0", objectColor[0], objectColor[1], objectColor[2]);
+        let object_colour = self.color * self.reflectance;
+        lighting_program.set_vec3f(b"objectColor\0", object_colour[0], object_colour[1], object_colour[2]);
 
 
         

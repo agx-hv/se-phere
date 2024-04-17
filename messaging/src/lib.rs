@@ -9,13 +9,13 @@ pub enum Command {
     STATE,             // 0x01
     POS,               // 0x02
     MUT,               // 0x03
-    R_STATE,           // 0x04
+    RSTATE,           // 0x04
     PPOS,              // 0x05
-    R_PPOS,            // 0x06
+    RPPOS,            // 0x06
     GNDSTATE,          // 0x07
-    R_GNDSTATE,        // 0x08
+    RGNDSTATE,        // 0x08
     LOGIN,             // 0x09
-    SET_PID            // 0x10
+    SETPID            // 0x10
 }
 
 #[derive(Debug)]
