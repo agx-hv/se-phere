@@ -37,10 +37,10 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, AtomicU64, Ordering};
 use std::collections::VecDeque;
 
-const DELTA_TIME: time::Duration = time::Duration::from_millis(16);
+const DELTA_TIME: time::Duration = time::Duration::from_millis(1);
 const ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0);
-const MOVEMENT_DELTA: f32 = 0.006;
-const CAMERA_DELTA: f32 = 0.03;
+const MOVEMENT_DELTA: f32 = 0.003;
+const CAMERA_DELTA: f32 = 0.02;
 const PAN_TRESHOLD_RATIO:f64=0.01; //how close to the edge before panning
 const TILT_TRESHOLD_RATIO:f64=0.01; //how close to the edge before tilting
 const ZOOM_DELTA:f32 = 0.1;
@@ -632,8 +632,10 @@ async fn game(socket: &UdpSocket,
         }
 
         // socket
-        let p = player.pos_cmd();
-        socket.send(&p).await?;
+        if framenum%2 == 0 {
+            let p = player.pos_cmd();
+            socket.send(&p).await?;
+        }
 
 
         if player.detect_col(&ground).0 {
