@@ -4,34 +4,34 @@
 // #![allow(unused_imports)]
 
 //imports
+
+pub mod shader;
+pub mod camera; 
+pub mod meshloader; 
+pub mod entities; 
+pub mod keys;
+pub mod music;
+
+use rand::{thread_rng, Rng};
+use shader::ShaderProgram;
+use entities::*;
+use meshloader::Mesh;
+
 use glam::{vec3a, vec4};
 use glam::Vec3Swizzles;
 use glam::f32::Vec3A;
 use glfw::Context;
 use glfw::Cursor;
 use glfw::StandardCursor::*;
-pub mod shader;
-use shader::ShaderProgram;
-pub mod camera; 
-pub mod meshloader; 
-pub mod entities; 
-use entities::*;
-pub mod keys;
-use std::{time, f32::consts::PI};
-use rand::*;
-use crate::meshloader::Mesh;
-use std::env;
+use std::{time, f32::consts::PI,env};
 use rand::rngs::ThreadRng;
 
-// sound
-pub mod music;
-
 // net, tokio, messaging
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::net::UdpSocket;
 use messaging::{Message, Command, AsBytes};
 use std::sync::Arc;
 use std::sync::atomic::{ AtomicU8, AtomicU32, AtomicU64, Ordering};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 const DELTA_TIME: time::Duration = time::Duration::from_millis(1);
 const ORIGIN: Vec3A = vec3a(0.0, 0.0, 0.0);

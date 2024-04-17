@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 eframe = "0.27.2"
 env_logger = "0.11.3"
-image = "0.25.1"
+image = {version = "0.24" , features = ["jpeg", "png"] }
 egui_extras = { version = "*", features = ["all_loaders"] }
 
 [profile.release]
