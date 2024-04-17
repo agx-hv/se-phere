@@ -312,7 +312,8 @@ async fn game(socket: &UdpSocket,
     let mut ground = Entity::new(
         "assets/mesh/ground.stl",
         ORIGIN,
-        0.8*vec3a(0.47, 0.41, 0.34),
+        // 0.8*vec3a(0.47, 0.41, 0.34),
+        1.1*vec3a(0.47, 0.41, 0.34),
         0.0,
     );
     ground.set_scale(3.0,1.0,3.0);
@@ -399,7 +400,7 @@ async fn game(socket: &UdpSocket,
 
     unsafe {
         gl::Enable(gl::DEPTH_TEST);
-        gl::ClearColor(0.2, 0.3, 0.3, 1.0);
+        gl::ClearColor(0.52, 0.81, 0.92, 1.0);
         lighting_program = ShaderProgram::new("client/src/shaders/lighting.vs", "client/src/shaders/lighting.fs");
         lighting_program.set_vec3fv(b"lightColor\0", MAX_LIGHTS, &light_colors[0]);
         lighting_program.set_vec3fv(b"lightPos\0", MAX_LIGHTS, &light_positions[0]);
