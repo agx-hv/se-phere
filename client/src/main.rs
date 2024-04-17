@@ -583,9 +583,10 @@ async fn game(socket: &UdpSocket,
         let has_goal = player.detect_col(&goal).0;
         if has_goal || player.entity.pos.y < -5.0 {
             let theta = rng.gen_range(0.0..2.0*PI);
+            let theta2 = rng.gen_range(0.0..2.0*PI);
             let player_init_pos = vec3a(PLAYER_SPAWN_RADIUS*f32::cos(theta), 0.5, PLAYER_SPAWN_RADIUS*f32::sin(theta));
             let player_init_cam = camera::PlayerCamera::update(player_init_pos, scr_w as f32/scr_h as f32, 
-                f32::atan2(player_init_pos.x, player_init_pos.z),player.camera);
+                theta2,player.camera);
             player.entity.set_pos(player_init_pos);
             player.camera = player_init_cam;
             player.vec = vec3a(0.0,0.0,0.0);
