@@ -79,7 +79,7 @@ impl Message {
         bytes.append(&mut self.payload);
         bytes
     }
-    pub fn try_from_data(socket_addr: SocketAddr, data: &[u8]) -> Option<Self> {
+    pub fn try_from_data(_socket_addr: SocketAddr, data: &[u8]) -> Option<Self> {
         let command = Command::from_repr(*data.get(0)?);
         let mut payload = vec!();
         payload.extend_from_slice(data.get(1..)?);

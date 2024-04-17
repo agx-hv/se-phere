@@ -5,7 +5,7 @@ use glam::*;
 use crate::meshloader::Mesh;
 use crate::camera::PlayerCamera;
 use crate::shader::ShaderProgram;
-use image::{DynamicImage, GenericImageView};
+use image::{GenericImageView};
 
 
 pub struct Player {

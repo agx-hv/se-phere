@@ -1,7 +1,7 @@
 extern crate stl_io;
 extern crate glam;
-use glam::{vec3a,vec2};
-use glam::f32::{Vec3A,Vec2,Mat3A};
+use glam::vec3a;
+use glam::f32::{Vec3A,Mat3A};
 use stl_io::IndexedTriangle;
 use std::fs::OpenOptions;
 
@@ -39,8 +39,6 @@ impl Mesh {
                 );
                 vertices_normals.push(n);
                 // Calculate texture coordinates based on vertex positions
-                let u = v[0]; // Example: Using x-coordinate as texture U coordinate
-                let v = v[2]; // Example: Using y-coordinate as texture V coordinate
             }
 
         }

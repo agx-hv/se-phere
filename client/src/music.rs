@@ -1,7 +1,7 @@
 use std::fs::File;
-use std::io::{BufRead,BufReader, Write};
+use std::io::BufReader;
 use rodio::OutputStreamHandle;
-use rodio::{Decoder, OutputStream, source::Source};
+use rodio::{Decoder, source::Source};
 
 pub async fn main(){
 }
@@ -12,7 +12,7 @@ pub fn play(path: &str, stream_handle: &OutputStreamHandle){
     // Decode that sound file into a source
     let source = Decoder::new(file).unwrap();
     // Play the sound directly on the device
-    stream_handle.play_raw(source.convert_samples());
+    let _ = stream_handle.play_raw(source.convert_samples());
 
     // The sound plays in a separate audio thread,
     // so we need to keep the main thread alive while it's playing.

@@ -36,7 +36,7 @@ impl Server {
             socket,
             mut buf,
             mut to_send,
-            ref state,
+            state: _,
         } = self;
 
         let mut player_sockets = vec!();
@@ -63,7 +63,7 @@ impl Server {
                         },
                         Command::BLOB => {},
                         Command::STATE => {
-                            if let Some(pid) = m.extract_u8(0) {
+                            if let Some(_pid) = m.extract_u8(0) {
                                 //println!("PID {} wants the gamestate", pid);
                                 let mut reply = Message::new(Command::R_STATE);
                                 reply.push_bytes(self.state.num_players.as_bytes());
@@ -96,9 +96,9 @@ impl Server {
                             }
                         }
                         Command::MUT => {
-                            if let Some(amt) = m.extract_f32(5) {
-                                let pid = m.extract_u8(0).unwrap();
-                                let idx = m.extract_u32(1).unwrap();
+                            if let Some(_amt) = m.extract_f32(5) {
+                                // let pid = m.extract_u8(0).unwrap();
+                                // let idx = m.extract_u32(1).unwrap();
                                 self.state.ground.frame += 1;
                                 //self.state.ground.mutations[idx as usize] += amt;
                                 //println!("PID {} wants to mutate idx {} by {}", pid, idx, amt);
@@ -120,7 +120,7 @@ impl Server {
 
                         },
                         Command::PPOS => {
-                            if let Some(pid) = m.extract_u8(0) {
+                            if let Some(_pid) = m.extract_u8(0) {
                                 let mut reply = Message::new(Command::R_PPOS);
                                 reply.push_bytes(self.state.num_players.as_bytes());
                                 for i in 0..self.state.num_players {
