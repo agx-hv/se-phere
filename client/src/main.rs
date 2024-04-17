@@ -23,6 +23,7 @@ use crate::meshloader::Mesh;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::env;
+use rand::rngs::ThreadRng;
 
 // sound
 pub mod music;
@@ -260,7 +261,7 @@ async fn game(socket: &UdpSocket,
         let mut newplayer = Entity::new(
             "assets/mesh/small_sphere.stl",
             ORIGIN,
-            ENEMY_COLOR,
+            randcolor(&mut rng),
             1.0,
         );
         let mut score = Entity::new(
@@ -445,7 +446,7 @@ async fn game(socket: &UdpSocket,
             let mut newplayer = Entity::new(
                 "assets/mesh/small_sphere.stl",
                 ORIGIN,
-                ENEMY_COLOR,
+                randcolor(&mut rng),
                 1.0,
             );
             let mut score = Entity::new(
@@ -720,4 +721,11 @@ fn handle_window_event(glfw: &mut glfw::Glfw, window: &mut glfw::Window, event: 
         _=>{}
     } 
 
+}
+
+fn randcolor(rng: &mut ThreadRng) -> Vec3A {
+    let r = rng.gen_range(0.0..1.0);
+    let g = rng.gen_range(0.0..1.0);
+    let b = rng.gen_range(0.0..1.0);
+    return vec3a(r,g,b);
 }
