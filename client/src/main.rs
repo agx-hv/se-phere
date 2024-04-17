@@ -51,7 +51,7 @@ const CUBE_RESPAWN_TIME: u64 = 60;
 const MAX_LIGHTS: usize = 16;
 const LOCAL_IP_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
 const SERVER_PORT: u16 = 42069;
-
+const ENEMY_COLOR: Vec3A = vec3a(0.6, 0.1, 0.8);
 
 #[tokio::main]
 async fn main() -> tokio::io::Result<()> {
@@ -223,7 +223,7 @@ async fn game(socket: &UdpSocket,
     let mut myscore = 0;
     let mut myhealth = 3;
 
-    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    //let (_stream, stream_handle) = OutputStream::try_default().unwrap();
 
     // initializing entities as Entity
     let mut player = Player::new(
@@ -246,7 +246,7 @@ async fn game(socket: &UdpSocket,
     let mut goal = Entity::new(
         "assets/mesh/rt_marker.stl",
         ORIGIN + vec3a(0.0,0.0,0.0),
-        1.0*vec3a(0.2, 0.2, 0.2),
+        1.0*vec3a(0.8, 0.8, 0.2),
         1.0,
     );
     goal.set_scale(2.0,2.0,2.0);
@@ -260,13 +260,13 @@ async fn game(socket: &UdpSocket,
         let mut newplayer = Entity::new(
             "assets/mesh/small_sphere.stl",
             ORIGIN,
-            vec3a(0.1, 0.1, 0.8),
+            ENEMY_COLOR,
             1.0,
         );
         let mut score = Entity::new(
             "assets/mesh/3.stl",
             ORIGIN,
-            vec3a(0.8, 0.1, 0.8),
+            ENEMY_COLOR,
             1.0,
         );
         other_player_entities.push((newplayer,score));
@@ -313,10 +313,11 @@ async fn game(socket: &UdpSocket,
         "assets/mesh/ground.stl",
         ORIGIN,
         // 0.8*vec3a(0.47, 0.41, 0.34),
-        1.1*vec3a(0.47, 0.41, 0.34),
+        vec3a(0.47, 0.41, 0.34),
         0.0,
     );
     ground.set_scale(3.0,1.0,3.0);
+    ground.reflectance = 1.1;
 
     let mut rt_marker = Entity::new(
         "assets/mesh/rt_marker.stl",
@@ -444,13 +445,13 @@ async fn game(socket: &UdpSocket,
             let mut newplayer = Entity::new(
                 "assets/mesh/small_sphere.stl",
                 ORIGIN,
-                vec3a(0.8, 0.1, 0.8),
+                ENEMY_COLOR,
                 1.0,
             );
             let mut score = Entity::new(
                 "assets/mesh/3.stl",
                 ORIGIN,
-                vec3a(0.8, 0.1, 0.8),
+                ENEMY_COLOR,
                 1.0,
             );
             unsafe { newplayer.gl_init(); score.gl_init(); }
@@ -560,7 +561,7 @@ async fn game(socket: &UdpSocket,
 
             ground.draw(&mut player.camera, &lighting_program,true);
 
-            goal_2d.draw(&mut player.camera, &lighting_program,false);
+            //goal_2d.draw(&mut player.camera, &lighting_program,false);
 
             goal.draw(&mut player.camera, &lighting_program,false);
             myscore_entity.draw(&mut player.camera, &lighting_program,false);
@@ -569,7 +570,7 @@ async fn game(socket: &UdpSocket,
             }
             for (pe,score) in &mut other_player_entities {
                 pe.draw(&mut player.camera, &lighting_program,false);
-                score.draw(&mut player.camera, &lighting_program,false);
+                //score.draw(&mut player.camera, &lighting_program,false);
             }
         }
         
@@ -595,14 +596,14 @@ async fn game(socket: &UdpSocket,
                 myscore += 1;
                 let mut path = ["assets/mesh/",&myscore.to_string(),".stl"].join("");
                 myscore_entity.mesh = Mesh::new(&path, vec3a(1.0,1.0,1.0));
-                music::play("assets/oof.mp3",&stream_handle);
+                //music::play("assets/oof.mp3",&stream_handle);
             } else {
                 myhealth -= 1;
                 if myhealth == 0 { break; }
                 myhearts.pop();
                 let mut path = ["assets/mesh/",&myscore.to_string(),".stl"].join("");
                 myscore_entity.mesh = Mesh::new(&path, vec3a(1.0,1.0,1.0));
-                music::play("assets/oof.mp3",&stream_handle);
+                //music::play("assets/oof.mp3",&stream_handle);
             }
         }
 
@@ -651,7 +652,7 @@ async fn game(socket: &UdpSocket,
         myscore_entity.mesh.rotate_y(0.15*framenum as f32);
 
         for e in &mut myhearts {
-            e.mesh.rotate_y(0.15*framenum as f32);
+            e.mesh.rotate_y(player.camera.camera_angle);
         }
 
 
@@ -662,9 +663,9 @@ async fn game(socket: &UdpSocket,
         goal_2d.pos = player.camera.eye() + forward*0.02 - right*0.016 - up*0.01 ;
         myscore_entity.pos = player.pos() + vec3a(0.0,0.3,0.0);
 
-        let offset = vec3a(0.13,0.0,0.0);
+        let offset = 0.13*player.camera.up().cross(player.pos() - player.camera.eye()).normalize();
         for i in 0..myhearts.len() {
-            myhearts[i].pos = player.pos() + vec3a(0.0,0.5,0.0) + offset*(i as f32 - 1.0);
+            myhearts[i].pos = player.pos() + vec3a(0.0,0.5,0.0) - offset*(i as f32 - 1.0);
         }
 
 
