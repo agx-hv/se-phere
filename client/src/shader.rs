@@ -2,13 +2,17 @@ extern crate gl;
 use gl::types::*;
 use gl::*;
 
+// Shader Program struct
 pub struct ShaderProgram {
     pub vs: GLenum,
     pub fs: GLenum,
     pub program: GLuint,
 }
 
+// Shader Program methods
 impl ShaderProgram {
+
+    // Shader program constructor from shader files
     pub unsafe fn new(vs_path: &str, fs_path: &str) -> Self {
         let vs = CreateShader(VERTEX_SHADER);
         let fs = CreateShader(FRAGMENT_SHADER);
@@ -80,14 +84,18 @@ impl ShaderProgram {
             program: program,
         }
     }
+
+    // Method that sends a uniform mat4f into the shader program
     pub unsafe fn set_mat4f(&self, loc: &[u8], value: *const GLfloat) {
         let loc = gl::GetUniformLocation(self.program, loc.as_ptr() as *const i8);
         gl::UniformMatrix4fv(loc, 1, gl::FALSE, value);
     }
+    // Method to send a uniform vec3f into the shader program
     pub unsafe fn set_vec3f(&self, loc: &[u8], v0: GLfloat, v1: GLfloat, v2: GLfloat) {
         let loc = gl::GetUniformLocation(self.program, loc.as_ptr() as *const i8);
         gl::Uniform3f(loc, v0, v1, v2);
     }
+    // Method that sends an array of vec3f into the shader program
     pub unsafe fn set_vec3fv(&self, loc: &[u8], count: usize, value: *const GLfloat) {
         let loc = gl::GetUniformLocation(self.program, loc.as_ptr() as *const i8);
         gl::Uniform3fv(loc, count as GLsizei, value);

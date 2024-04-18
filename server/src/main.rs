@@ -6,6 +6,8 @@ use std::{env, io};
 use tokio::net::UdpSocket;
 
 const MUTATION_STACK: usize = 1024; //max for windows is 20199, empirically tested, may change
+
+// Some structs to keep game state
 #[derive(Debug, Copy, Clone)]
 struct Player {
     pid: u8,
@@ -23,6 +25,8 @@ struct GameState {
     num_players: u8,
 }
 
+
+// Main server struct
 struct Server {
     socket: UdpSocket,
     buf: Vec<u8>,
@@ -30,6 +34,7 @@ struct Server {
     state: GameState,
 }
 
+// run method for asynchronous network handling (tokio-rs)
 impl Server {
     async fn run(mut self) -> Result<(), io::Error> {
         let Server {
@@ -39,17 +44,24 @@ impl Server {
             state: _,
         } = self;
 
+        // Initialize vector to store sockets for each connection (used for LAN mode)
         let mut player_sockets = vec![];
-        let mut player_buffers: [Option<Vec<u8>>; 32] = Default::default();
+
+        // Initialize array as a buffer for each player to store mutations as they come
+        let mut player_buffers: [Option<Vec<u8>>; 32] = Default::default(); // Initializes to [None; 32]
         loop {
             // First we check to see if there's a message we need to echo back.
             // If so then we try to send it back to the original source, waiting
             // until it's writable and we're able to do so.
             if let Some((size, peer)) = to_send {
                 let b = &buf[..size];
+                // Create the message from bytes
                 if let Some(mut m) = Message::try_from_data(peer, b) {
                     //println!("Received command {:?} from {}", m.command, peer);
+                    
+                    // Pattern matching on Command enum sent by client
                     match m.command {
+                        // Client login message. Action: Assign player id to them.
                         Command::LOGIN => {
                             let mut reply = Message::new(Command::SETPID);
                             reply.push_bytes((player_sockets.len() as u8).as_bytes());
@@ -61,7 +73,11 @@ impl Server {
                             }
                             dbg!(&player_sockets);
                         }
+                        // Reserved for future use, sending large binary data
                         Command::BLOB => {}
+
+                        // Client game state request message. Action: Send number of players and
+                        // ground frame number
                         Command::STATE => {
                             if let Some(_pid) = m.extract_u8(0) {
                                 //println!("PID {} wants the gamestate", pid);
@@ -82,6 +98,8 @@ impl Server {
                                 );
                             }
                         }
+
+                        // Client position message. Action: Store position into player struct.
                         Command::POS => {
                             if let Some(pos) = m.extract_vec3a(1) {
                                 let pid = m.extract_u8(0).unwrap();
@@ -98,6 +116,8 @@ impl Server {
                                 );
                             }
                         }
+
+                        // Client ground mutation message. Action: Store mutations in player buffers
                         Command::MUT => {
                             if let Some(_amt) = m.extract_f32(5) {
                                 // let pid = m.extract_u8(0).unwrap();
@@ -123,6 +143,8 @@ impl Server {
                                 );
                             }
                         }
+                        
+                        // Client player position request message. Action: Reply with all player coordinates.
                         Command::PPOS => {
                             if let Some(_pid) = m.extract_u8(0) {
                                 let mut reply = Message::new(Command::RPPOS);
@@ -140,6 +162,9 @@ impl Server {
                                 );
                             }
                         }
+                        
+                        // Client ground state request message. Action: Reply with player buffer
+                        // data about ground deformations.
                         Command::GNDSTATE => {
                             if let Some(pid) = m.extract_u8(0) {
                                 if let Some(v) = &player_buffers[pid as usize] {

@@ -6,6 +6,12 @@ use crate::shader::ShaderProgram;
 use gl::types::{GLint, GLuint};
 use glam::*;
 
+// Player abilities (to be expanded in future)
+pub struct Ability {
+    pub ground_mut_power: f32,  // Affects how much a player can mutate the ground mesh
+}
+
+// Player struct for the main player
 pub struct Player {
     pub vec: Vec3A,
     pub entity: Entity, // inherits Entity struct
@@ -16,25 +22,10 @@ pub struct Player {
     pub player_id: u8,
 }
 
-pub struct Ability {
-    pub ground_mut_power: f32,
-}
-
-#[derive(Debug)]
-pub struct Entity {
-    pub mesh: Mesh,
-    pub pos: Vec3A,
-    pub vao: u32,
-    pub vbo: u32,
-    pub color: Vec3A,
-    pub reflectance: f32,
-    pub bounce: f32,
-    pub scale: Vec3A,
-    pub texture_id0: GLuint,
-    pub texture_id1: GLuint,
-}
-
+// Player methods
 impl Player {
+
+    // Player constructor
     pub fn new(
         stl_path: &str,
         pos: Vec3A,
@@ -56,6 +47,8 @@ impl Player {
             player_id,
         }
     }
+
+    // Method to move player
     pub fn mv(&mut self, t_vec: Vec3A) {
         // function to add velocity
         if self.on_ground {
@@ -64,6 +57,8 @@ impl Player {
         const GRAV_DELTA: f32 = 0.01;
         self.vec += vec3a(0.0, -GRAV_DELTA, 0.0); // gravity as vec3a.y
     }
+
+    // Helper function for drag and friction
     pub fn mvhelper(&mut self) {
         // function to manage velocity - self.vec
         self.entity.pos += self.vec;
@@ -73,34 +68,20 @@ impl Player {
         }
         self.vec *= vec_delta;
     }
+
+    // Getter for position
     pub fn pos(&self) -> Vec3A {
         self.entity.pos
     }
+
+    // Getter for mesh
     pub fn mesh(&self) -> &Mesh {
         &self.entity.mesh
     }
-    pub fn collide_sphere(&mut self, other: &Entity) {
-        let (collided, norm, dist) = self.detect_col_sphere(other);
-        if collided {
-            self.entity.pos += dist * norm; // Prevent clipping into collided object
-            self.camera.player_pos += dist * norm; // Prevent clipping into collided object
-            self.vec -= self.vec.dot(norm) * norm * (1.0 + self.entity.bounce * other.bounce);
-            // bonuce formula
-        }
-    }
-    pub fn collide(&mut self, other: &Entity) {
-        let (collided, norm, dist) = self.detect_col(other);
-        if collided {
-            self.entity.pos += dist * norm; // Prevent clipping into collided object
-            self.camera.player_pos += dist * norm; // Prevent clipping into collided object
-            self.vec -= self.vec.dot(norm) * norm * (1.0 + self.entity.bounce * other.bounce);
-            // bonuce formula
-        }
-    }
 
+    // Collision detection for sphere-sphere intersection
     pub fn detect_col_sphere(&self, other: &Entity) -> (bool, Vec3A, f32) {
         // Performing collision detection logic
-        // There must be a more efficient way other than checking ALL mesh faces
         let intersection_amt = self.pos().distance(other.pos) - 0.2;
         if intersection_amt > 0.0 {
             let n = (self.pos() - other.pos).normalize();
@@ -109,6 +90,7 @@ impl Player {
         (false, vec3a(0.0, 0.0, 0.0), 0.0)
     }
 
+    // Collision detection for sphere-mesh intersection
     pub fn detect_col(&self, other: &Entity) -> (bool, Vec3A, f32) {
         // Performing collision detection logic
         for face in &other.mesh.faces {
@@ -140,7 +122,8 @@ impl Player {
                 let beta = f(a, p, c);
                 let gamma = f(a, b, p);
 
-                let inrange = |x| (x >= 0.0 && x <= 1.0);
+                // Closure to check if a f32 is in between 0.0 and 1.0
+                let inrange = |x| (x >= 0.0 && x <= 1.0); 
                 if inrange(alpha) && inrange(beta) && inrange(gamma) {
                     return (true, face_normal, self.radius - d);
                 }
@@ -150,6 +133,27 @@ impl Player {
         (false, vec3a(0.0, 0.0, 0.0), 0.0)
     }
 
+    // Collision behaviour for sphere-sphere collision
+    pub fn collide_sphere(&mut self, other: &Entity) {
+        let (collided, norm, dist) = self.detect_col_sphere(other);
+        if collided {
+            self.entity.pos += dist * norm; // Prevent clipping into collided object
+            self.camera.player_pos += dist * norm; // Apply same translation to camera
+            self.vec -= self.vec.dot(norm) * norm * (1.0 + self.entity.bounce * other.bounce); // bonuce formula
+        }
+    }
+
+    // Collision behaviour for sphere-mesh collision
+    pub fn collide(&mut self, other: &Entity) {
+        let (collided, norm, dist) = self.detect_col(other);
+        if collided {
+            self.entity.pos += dist * norm; // Prevent clipping into collided object
+            self.camera.player_pos += dist * norm; // Apply same translation to camera
+            self.vec -= self.vec.dot(norm) * norm * (1.0 + self.entity.bounce * other.bounce); // bonuce formula
+        }
+    }
+    
+    // Method that returns the position command to be sent over network
     pub fn pos_cmd(&self) -> [u8; 14] {
         let mut result = vec![0x02];
         result.extend_from_slice(&[self.player_id]);
@@ -161,7 +165,25 @@ impl Player {
     }
 }
 
+
+// Entity struct for all entities in game
+#[derive(Debug)]
+pub struct Entity {
+    pub mesh: Mesh,
+    pub pos: Vec3A,
+    pub vao: u32,
+    pub vbo: u32,
+    pub color: Vec3A,
+    pub reflectance: f32,
+    pub bounce: f32,
+    pub scale: Vec3A,
+    pub texture_id0: GLuint,
+    pub texture_id1: GLuint,
+}
+
+// Entity methods
 impl Entity {
+    // Entity constructor
     pub fn new(stl_path: &str, pos: Vec3A, color: Vec3A, bounce: f32) -> Self {
         let scale = vec3a(1.0, 1.0, 1.0);
         let m = Mesh::new(stl_path, scale);
@@ -178,20 +200,30 @@ impl Entity {
             texture_id1: 0,
         }
     }
+
+    // Setter for entity position
     pub fn set_pos(&mut self, new_pos: Vec3A) {
         self.pos = new_pos
     }
+    
+    // Method to scale the mesh of an entity
     pub fn set_scale(&mut self, x: f32, y: f32, z: f32) {
         self.scale = vec3a(x, y, z);
         let m = Mesh::new(&self.mesh.path as &str, self.scale);
         self.mesh = m;
     }
+
+    // Method to move an entity
     pub fn mv(&mut self, t_vec: Vec3A) {
         self.pos += t_vec;
     }
+
+    // Setter for entity color
     pub fn set_color(&mut self, color: Vec3A) {
         self.color = color;
     }
+
+    // Method to initialize entity VAO and VBO, as well as loading the textures
     pub unsafe fn gl_init(&mut self) {
         gl::GenVertexArrays(1, &mut self.vao);
         assert_ne!(self.vao, 0);
@@ -256,12 +288,12 @@ impl Entity {
         self.texture_id1 = texture_id1;
     }
 
-    pub unsafe fn draw(
-        &mut self,
-        camera: &mut PlayerCamera,
-        lighting_program: &ShaderProgram,
-        tex_on: bool,
-    ) {
+    // Method to draw the entity on some player camera using a specified shader
+    pub unsafe fn draw(&mut self,
+                       camera: &mut PlayerCamera,
+                       lighting_program: &ShaderProgram,
+                       tex_on: bool) {
+
         let vertices = self.mesh.vertices_flattened();
         gl::BindVertexArray(self.vao);
         gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
@@ -322,6 +354,8 @@ impl Entity {
         gl::DrawArrays(gl::TRIANGLES, 0, self.mesh.vertices_normals_tex.len() as i32);
     }
 
+    // Method to retrieve the closest vertex index at location (x, 0.0, z)
+    // Used for ground mutation based on raycasted mouse coordinates
     pub fn closest_vertex_index(&mut self, xz: Vec2) -> usize {
         let m = &mut self.mesh;
         let mut min_d = f32::MAX;

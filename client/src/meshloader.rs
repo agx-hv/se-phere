@@ -5,6 +5,7 @@ use glam::f32::{Vec3A,Mat3A};
 use stl_io::IndexedTriangle;
 use std::fs::OpenOptions;
 
+// Mesh struct to store vertex and face and normals information
 #[derive(Debug)]
 pub struct Mesh {
     pub path: String,
@@ -13,7 +14,13 @@ pub struct Mesh {
     pub vertices_normals_tex: Vec<Vec3A>, // New field for texture coordinates
 }
 
+// Mesh methods
 impl Mesh {
+    
+    // Mesh constructor that takes stl path and scale as arguments
+    // Parses the stl file to extract vertex and face information and stores the scaled mesh into
+    // the Mesh struct. 
+    // vertices_normals_tex is used for shading.
     pub fn new(path: &str, scale: Vec3A) -> Self {
         let mut vertices = Vec::new();
         let mut vertices_normals_tex = Vec::new(); // Initialize texture coordinates vector
@@ -51,6 +58,8 @@ impl Mesh {
             vertices_normals_tex, // Assign texture coordinates to the struct field
         }
     }
+
+    // Method to flatten vertices_normals_tex into 1-dimension to be sent to shader
     pub fn vertices_flattened(&self) -> Vec<f32> {
         let mut v = vec!();
         for vertex in &self.vertices_normals_tex {
@@ -58,6 +67,8 @@ impl Mesh {
         }
         v
     }
+
+    // Method to mutate a single vertex of the mesh by some direction and amount
     pub fn mutate(&mut self, idx: usize, dir: Vec3A, amount: f32) {
         self.vertices[idx] += dir*amount;
         self.vertices_normals_tex = vec!();
@@ -84,6 +95,8 @@ impl Mesh {
             }
         }
     }
+
+    // Method to rotate the mesh about y-axis to allow animated spinning entities to be rendered
     pub fn rotate_y(&mut self, theta: f32) {
         let ry = Mat3A::from_rotation_y(theta);
         for mut v in &self.vertices {
