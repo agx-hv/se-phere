@@ -15,7 +15,7 @@ pub enum Command {
     GNDSTATE,  // 0x07
     RGNDSTATE, // 0x08
     LOGIN,     // 0x09
-    SETPID,    // 0x10
+    SETPID,    // 0x0A
 }
 
 #[derive(Debug)]
