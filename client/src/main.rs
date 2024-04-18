@@ -1,8 +1,3 @@
-#![allow(non_snake_case)]
-#![allow(unused_mut)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
-
 pub mod camera;
 pub mod entities;
 pub mod keys;
@@ -25,7 +20,7 @@ use rand::rngs::ThreadRng;
 use std::{env, f32::consts::PI, time};
 
 // sound
-use rodio::{Decoder, OutputStream, source::Source}; // dont remove import, for comme
+use rodio::OutputStream; // dont remove import, for comme
 
 // net, tokio, messaging
 use messaging::{AsBytes, Command, Message};
@@ -84,9 +79,7 @@ async fn main() -> tokio::io::Result<()> {
 
     // Create UDP socket
     let socket = UdpSocket::bind(LOCAL_IP_ADDR.to_string() + ":0").await?;
-    let socket2 = UdpSocket::bind(LOCAL_IP_ADDR.to_string() + ":0").await?;
     socket.connect(server_socket).await?;
-    socket2.connect(server_socket).await?;
 
     let listener = UdpSocket::bind(LOCAL_IP_ADDR.to_string() + ":0").await?;
     listener.connect(server_socket).await?;
@@ -94,11 +87,6 @@ async fn main() -> tokio::io::Result<()> {
     let SocketAddr::V4(v4) = &listener.local_addr().unwrap() else {
         unreachable!()
     };
-
-    &socket;
-    &socket2;
-    v4.ip();
-    v4.port();
 
     let mut m = Message::new(Command::LOGIN);
     m.push_bytes((v4.port() as u32).as_bytes());
@@ -110,11 +98,9 @@ async fn main() -> tokio::io::Result<()> {
     match m.command {
         Command::SETPID => {
             let pid = m.extract_u8(0).unwrap();
-            &pid;
-            tokio::join!(
+            let _ = tokio::join!(
                 game(
                     &socket,
-                    &socket2,
                     counter.clone(),
                     &listener,
                     pid,
@@ -132,9 +118,7 @@ async fn main() -> tokio::io::Result<()> {
                 ),
             );
         }
-        _ => {
-            &m;
-        }
+        _ => todo!(),
     }
 
     Ok(())
@@ -200,16 +184,13 @@ async fn listen(
                     //dbg!(&gnd_muts[1]);
                 }
             }
-            _ => {
-                &m;
-            }
+            _ => todo!(),
         }
     }
 }
 
 async fn game(
     socket: &UdpSocket,
-    socket2: &UdpSocket,
     counter: Arc<AtomicU64>,
     listener: &UdpSocket,
     pid: u8,
@@ -243,7 +224,7 @@ async fn game(
     let mut myscore = 0;
     let mut myhealth = 3;
 
-    //let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
 
     // initializing entities as Entity
     let mut player = Player::new(
@@ -605,7 +586,7 @@ async fn game(
                 myscore += 1;
                 let path = ["assets/mesh/", &myscore.to_string(), ".stl"].join("");
                 score_stl.mesh = Mesh::new(&path, vec3a(1.0, 1.0, 1.0));
-                //music::play("assets/sounds/yay.mp3",&stream_handle);
+                music::play("assets/sounds/yay.mp3",&stream_handle);
             } else {
                 myhealth -= 1;
                 if myhealth == 0 {
@@ -617,7 +598,7 @@ async fn game(
                 myhearts.pop();
                 let path = ["assets/mesh/", &myscore.to_string(), ".stl"].join("");
                 score_stl.mesh = Mesh::new(&path, vec3a(1.0, 1.0, 1.0));
-                //music::play("assets/sounds/oof.mp3",&stream_handle);
+                music::play("assets/sounds/oof.mp3",&stream_handle);
             }
         }
 
@@ -685,20 +666,17 @@ async fn game(
 
             player
                 .entity
-                .draw(&mut player.camera, &lighting_program, false);
+                .draw(&mut player.camera, &lighting_program);
 
-            ground.draw(&mut player.camera, &lighting_program, true);
+            ground.draw(&mut player.camera, &lighting_program);
 
-            // goal_2d.draw(&mut player.camera, &lighting_program,false);
-
-            goal.draw(&mut player.camera, &lighting_program, false);
-            score_stl.draw(&mut player.camera, &lighting_program, false);
+            goal.draw(&mut player.camera, &lighting_program);
+            score_stl.draw(&mut player.camera, &lighting_program);
             for e in &mut myhearts {
-                e.draw(&mut player.camera, &lighting_program, false);
+                e.draw(&mut player.camera, &lighting_program);
             }
             for (pe, _score) in &mut other_player_entities {
-                pe.draw(&mut player.camera, &lighting_program, false);
-                //score.draw(&mut player.camera, &lighting_program,false);
+                pe.draw(&mut player.camera, &lighting_program);
             }
         }
 

@@ -99,9 +99,6 @@ impl Mesh {
     // Method to rotate the mesh about y-axis to allow animated spinning entities to be rendered
     pub fn rotate_y(&mut self, theta: f32) {
         let ry = Mat3A::from_rotation_y(theta);
-        for mut v in &self.vertices {
-            v = &(ry**v);
-        }
 
         self.vertices_normals_tex = vec!();
         for face in &mut self.faces {

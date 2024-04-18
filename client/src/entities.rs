@@ -276,7 +276,7 @@ impl Entity {
     pub unsafe fn draw(&mut self,
                        camera: &mut PlayerCamera,
                        lighting_program: &ShaderProgram,
-                       tex_on: bool) {
+                       ) {
 
         let vertices = self.mesh.vertices_flattened();
         gl::BindVertexArray(self.vao);
