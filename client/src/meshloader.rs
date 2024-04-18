@@ -8,7 +8,6 @@ use std::fs::OpenOptions;
 #[derive(Debug)]
 pub struct Mesh {
     pub path: String,
-    pub vertices_normals: Vec<Vec3A>,
     pub faces: Vec<IndexedTriangle>,
     pub vertices: Vec<Vec3A>,
     pub vertices_normals_tex: Vec<Vec3A>, // New field for texture coordinates
@@ -16,7 +15,6 @@ pub struct Mesh {
 
 impl Mesh {
     pub fn new(path: &str, scale: Vec3A) -> Self {
-        let mut vertices_normals = Vec::new();
         let mut vertices = Vec::new();
         let mut vertices_normals_tex = Vec::new(); // Initialize texture coordinates vector
 
@@ -30,18 +28,6 @@ impl Mesh {
             vertices.push(vec3a(x,y,z));
         }
 
-        for face in &mesh.faces {
-            let n = vec3a(face.normal[0], face.normal[1], face.normal[2]);
-            for i in face.vertices {
-                let v = &mesh.vertices[i as usize];
-                vertices_normals.push(
-                    vec3a(scale[0]*v[0], scale[1]*v[1], scale[2]*v[2])
-                );
-                vertices_normals.push(n);
-                // Calculate texture coordinates based on vertex positions
-            }
-
-        }
         for face in &mesh.faces {
             let n = vec3a(face.normal[0], face.normal[1], face.normal[2]);
             for i in face.vertices {
@@ -60,7 +46,6 @@ impl Mesh {
 
         Mesh {
             path: String::from(path),
-            vertices_normals,
             faces: mesh.faces,
             vertices,
             vertices_normals_tex, // Assign texture coordinates to the struct field
@@ -75,7 +60,6 @@ impl Mesh {
     }
     pub fn mutate(&mut self, idx: usize, dir: Vec3A, amount: f32) {
         self.vertices[idx] += dir*amount;
-        self.vertices_normals = vec!();
         self.vertices_normals_tex = vec!();
         for face in &mut self.faces {
             let n: Vec3A;
@@ -88,10 +72,7 @@ impl Mesh {
             face.normal = stl_io::Vector::new([n.x,n.y,n.z]);
             for i in face.vertices {
                 let v = &self.vertices[i as usize];
-                self.vertices_normals.push(
-                    vec3a(v[0], v[1], v[2])
-                );
-                self.vertices_normals.push(n);
+
                 self.vertices_normals_tex.push(
                     vec3a(v[0], v[1], v[2])
                 );
@@ -108,7 +89,7 @@ impl Mesh {
         for mut v in &self.vertices {
             v = &(ry**v);
         }
-        self.vertices_normals = vec!();
+
         self.vertices_normals_tex = vec!();
         for face in &mut self.faces {
             let n: Vec3A;
@@ -121,13 +102,10 @@ impl Mesh {
             face.normal = stl_io::Vector::new([n.x,n.y,n.z]);
             for i in face.vertices {
                 let v = &self.vertices[i as usize];
-                self.vertices_normals.push(
-                    ry*vec3a(v[0], v[1], v[2])
-                );
+
                 self.vertices_normals_tex.push(
                     ry*vec3a(v[0], v[1], v[2])
                 );
-                self.vertices_normals.push(n);
                 self.vertices_normals_tex.push(n);
                 // Calculate texture coordinates based on vertex positions
                 let u = v[0]; // Example: Using x-coordinate as texture U coordinate

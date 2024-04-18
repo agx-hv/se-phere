@@ -111,7 +111,6 @@ impl Player {
 
     pub fn detect_col(&self, other: &Entity) -> (bool, Vec3A, f32) {
         // Performing collision detection logic
-        // There must be a more efficient way other than checking ALL mesh faces
         for face in &other.mesh.faces {
             let a = other.mesh.vertices[face.vertices[0]] + other.pos;
             let b = other.mesh.vertices[face.vertices[1]] + other.pos;
@@ -320,8 +319,9 @@ impl Entity {
         }
         gl::BindVertexArray(self.vao);
         gl::Uniform1i(self.texture_id1 as GLint, 0);
-        gl::DrawArrays(gl::TRIANGLES, 0, self.mesh.vertices_normals.len() as i32);
+        gl::DrawArrays(gl::TRIANGLES, 0, self.mesh.vertices_normals_tex.len() as i32);
     }
+
     pub fn closest_vertex_index(&mut self, xz: Vec2) -> usize {
         let m = &mut self.mesh;
         let mut min_d = f32::MAX;
