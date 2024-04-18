@@ -606,7 +606,7 @@ async fn game(
                 myscore += 1;
                 let path = ["assets/mesh/", &myscore.to_string(), ".stl"].join("");
                 score_stl.mesh = Mesh::new(&path, vec3a(1.0, 1.0, 1.0));
-                music::play("assets/yay.mp3",&stream_handle);
+                music::play("assets/sounds/yay.mp3",&stream_handle);
             } else {
                 myhealth -= 1;
                 if myhealth == 0 {
@@ -615,7 +615,7 @@ async fn game(
                 myhearts.pop();
                 let path = ["assets/mesh/", &myscore.to_string(), ".stl"].join("");
                 score_stl.mesh = Mesh::new(&path, vec3a(1.0, 1.0, 1.0));
-                music::play("assets/oof.mp3",&stream_handle);
+                music::play("assets/sounds/oof.mp3",&stream_handle);
             }
         }
 
