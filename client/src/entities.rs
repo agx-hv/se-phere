@@ -244,7 +244,7 @@ impl Entity {
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as GLint);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as GLint);
         gl::ActiveTexture(gl::TEXTURE0);
-        let texture0 = image::open("assets/white.jpg")
+        let texture0 = image::open("assets/textures/white.jpg")
             .expect("Failed to load texture image")
             .flipv()
             .to_rgb8();
@@ -263,7 +263,7 @@ impl Entity {
             gl::UNSIGNED_BYTE,
             texture0.as_ptr() as *const _,
         );
-        let texture1 = image::open("assets/dirt.jpg")
+        let texture1 = image::open("assets/textures/dirt.jpg")
             .expect("Failed to load texture image")
             .flipv()
             .to_rgb8();
