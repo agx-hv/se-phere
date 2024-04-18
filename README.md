@@ -51,21 +51,21 @@ cargo run --bin title --release
 ## Gameplay Loop
 
 ### Login to the Main Game via the GUI
-<p align="center">
-  <img height="100" src="https://github.com/agx-hv/se-phere/blob/main/assets/gui.gif" alt="gui showcase">
+<p align="left">
+  <img height="300" src="https://github.com/agx-hv/se-phere/blob/main/assets/gui.gif" alt="gui showcase">
 </p>
 
 ### Control Your Sphere with WASD and Score Points!
-<p align="center">
-  <img height="100" src="https://github.com/agx-hv/se-phere/blob/main/assets/score.gif" alt="do_score( )">
+<p align="left">
+  <img height="300" src="https://github.com/agx-hv/se-phere/blob/main/assets/score.gif" alt="do_score( )">
 </p>
 
 ### Raise the Ground to Block Others with Left Click
-<p align="center">
-  <img height="100" src="https://github.com/agx-hv/se-phere/blob/main/assets/build.gif" alt="do_build( )">
+<p align="left">
+  <img height="300" src="https://github.com/agx-hv/se-phere/blob/main/assets/build.gif" alt="do_build( )">
 </p>
 
 ### Lower the Ground to Eliminate Others with Right Click
-<p align="center">
-  <img height="100" src="https://github.com/agx-hv/se-phere/blob/main/assets/kill.gif" alt="do_kill( )">
+<p align="left">
+  <img height="300" src="https://github.com/agx-hv/se-phere/blob/main/assets/kill.gif" alt="do_kill( )">
 </p>
