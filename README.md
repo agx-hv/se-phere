@@ -31,7 +31,7 @@ Build from source, we don't own macs to test, sorry :\)
 - Download Git - <https://git-scm.com/downloads>
 - Download Rust - <https://www.rust-lang.org/learn/get-started>
 - Download Windows Build Tools - <https://visualstudio.microsoft.com/downloads/>  
-- Check C++ Tools  
+  - Select C++ Tools  
 - Download CMake - <https://cmake.org/download/>  
 - Clone the repository
 
