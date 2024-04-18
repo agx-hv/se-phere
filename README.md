@@ -11,16 +11,23 @@ Sphere.io is a multiplayer 3D game developed within the constraints of the OpenG
 
 ## Getting Started
 
-### Installation
+### Installation (Windows):
 - Download Git - <https://git-scm.com/downloads>
 - Download Rust - <https://www.rust-lang.org/learn/get-started>
 - Download Windows Build Tools - <https://visualstudio.microsoft.com/downloads/>  
  - Check C++ Tools  
 - Download CMake - <https://cmake.org/download/>
+
+### Installation (Mac/Linux):
+
+Install Rust via rustup
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+Clone the repository
 ```bash
 git clone https://github.com/agx-hv/se-phere
 ```
-
 
 ## Running The Game
 
