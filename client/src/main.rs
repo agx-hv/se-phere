@@ -26,6 +26,9 @@ use glfw::StandardCursor::*;
 use rand::rngs::ThreadRng;
 use std::{env, f32::consts::PI, time};
 
+// sound
+use rodio::{Decoder, OutputStream, source::Source};
+
 // net, tokio, messaging
 use messaging::{AsBytes, Command, Message};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -241,7 +244,7 @@ async fn game(
     let mut myscore = 0;
     let mut myhealth = 3;
 
-    //let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
 
     // initializing entities as Entity
     let mut player = Player::new(
@@ -564,7 +567,7 @@ async fn game(
 
             ground.draw(&mut player.camera, &lighting_program, true);
 
-            //goal_2d.draw(&mut player.camera, &lighting_program,false);
+            // goal_2d.draw(&mut player.camera, &lighting_program,false);
 
             goal.draw(&mut player.camera, &lighting_program, false);
             myscore_entity.draw(&mut player.camera, &lighting_program, false);
@@ -614,7 +617,7 @@ async fn game(
                 myscore += 1;
                 let path = ["assets/mesh/", &myscore.to_string(), ".stl"].join("");
                 myscore_entity.mesh = Mesh::new(&path, vec3a(1.0, 1.0, 1.0));
-                //music::play("assets/oof.mp3",&stream_handle);
+                music::play("assets/yay.mp3",&stream_handle);
             } else {
                 myhealth -= 1;
                 if myhealth == 0 {
@@ -623,7 +626,7 @@ async fn game(
                 myhearts.pop();
                 let path = ["assets/mesh/", &myscore.to_string(), ".stl"].join("");
                 myscore_entity.mesh = Mesh::new(&path, vec3a(1.0, 1.0, 1.0));
-                //music::play("assets/oof.mp3",&stream_handle);
+                music::play("assets/oof.mp3",&stream_handle);
             }
         }
 

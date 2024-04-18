@@ -12,11 +12,11 @@ Sphere.io is a multiplayer 3D game developed within the constraints of the OpenG
 ## Getting Started
 
 ### Installation
-- Download git - <https://git-scm.com/downloads>
-- Download rust - <https://www.rust-lang.org/learn/get-started>
-- Download windows build tools - <https://visualstudio.microsoft.com/downloads/>  
- - Check C++ tools  
-- Download cmake - <https://cmake.org/download/>
+- Download Rit - <https://git-scm.com/downloads>
+- Download Rust - <https://www.rust-lang.org/learn/get-started>
+- Download Windows Build Tools - <https://visualstudio.microsoft.com/downloads/>  
+ - Check C++ Tools  
+- Download CMake - <https://cmake.org/download/>
 ```bash
 git clone https://github.com/agx-hv/se-phere
 ```
@@ -39,11 +39,33 @@ cargo run --bin title --release
 
 
 ## Instructions
-```w``` key to Roll Forward  
-```s``` key to Roll Backward  
-```a``` key to Spin Left  
-```d``` key to Spin Right  
+```W``` key to Roll Forward  
+```S``` key to Roll Backward  
+```A``` key to Spin Left  
+```D``` key to Spin Right  
 ```Spacebar``` to Jump  
 ```LeftClick``` to Raise Ground  
 ```RightClick``` to Lower Ground  
-```esc```  to Quit Application
+```Esc```  to Quit Application
+
+## Gameplay Loop
+
+### Login to the Main Game via the GUI
+<p align="center">
+  <img height="100" src="https://github.com/agx-hv/se-phere/blob/main/assets/gui.gif" alt="gui showcase">
+</p>
+
+### Control Your Sphere with WASD and Score Points!
+<p align="center">
+  <img height="100" src="https://github.com/agx-hv/se-phere/blob/main/assets/score.gif" alt="do_score( )">
+</p>
+
+### Raise the Ground to Block Others with Left Click
+<p align="center">
+  <img height="100" src="https://github.com/agx-hv/se-phere/blob/main/assets/build.gif" alt="do_build( )">
+</p>
+
+### Lower the Ground to Eliminate Others with Right Click
+<p align="center">
+  <img height="100" src="https://github.com/agx-hv/se-phere/blob/main/assets/kill.gif" alt="do_kill( )">
+</p>
