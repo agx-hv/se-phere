@@ -54,6 +54,7 @@ const ENEMY_COLOR: Vec3A = vec3a(0.6, 0.1, 0.8);
 
 #[tokio::main]
 async fn main() -> tokio::io::Result<()> {
+    // initialize varibles for starting
     let counter = Arc::new(AtomicU64::new(0));
     let num_players = Arc::new(AtomicU8::new(0));
     let mut player_positions = vec![];
@@ -298,10 +299,10 @@ async fn game(
 
     let mut myhearts = vec![];
     for _ in 0..3 {
-        let mut myhealth_entity =
-            Entity::new("assets/mesh/heart.stl", ORIGIN, vec3a(0.8, 0.2, 0.2), 1.0);
-        myhealth_entity.set_scale(0.5, 0.5, 0.5);
-        myhearts.push(myhealth_entity);
+        let mut heart_stl =
+            Entity::new("assets/mesh/heart.stl", ORIGIN, vec3a(0.8, 0.2, 0.2), 1.0); //spawn new heart with red colour
+        heart_stl.set_scale(0.5, 0.5, 0.5);
+        myhearts.push(heart_stl);
     }
 
     // let players_pos = [vec3a(0.0,0.0,0.0); 64];
@@ -630,7 +631,7 @@ async fn game(
             }
         }
 
-        // player.camera loop
+       //keyboard control
         player.camera.player_pos = player.pos();
         player.camera.camera_angle +=
             (if f32::abs(player.vec.x) > 0.0001 || f32::abs(player.vec.z) > 0.0001 {
@@ -642,9 +643,8 @@ async fn game(
             }) as f32
                 * CAMERA_DELTA
                 * (keystates[1] - keystates[3]) as f32; // ks[1]-ks[3] as a & d keys - left/right
-        player.camera.tilt += CAMERA_DELTA * (keystates[4] - keystates[5]) as f32; // ks[4]-ks[5] as i & k keys - pan up/pan down
 
-        // //mouse control
+        //mouse control
         if x < scr_w as f64 * PAN_TRESHOLD_RATIO {
             player.camera.camera_angle += CAMERA_DELTA;
         } else if x > scr_w as f64 * (1.0 - PAN_TRESHOLD_RATIO) {
@@ -661,6 +661,7 @@ async fn game(
         let p = player.pos_cmd();
         socket.send(&p).await?;
 
+        //collision detection for player
         if player.detect_col(&ground).0 {
             player.collide(&ground);
             player.on_ground = true;
@@ -678,13 +679,14 @@ async fn game(
                 .rotate_y(0.15 * framenum as f32);
         }
 
+        // score gui
         myscore_entity.mesh.rotate_y(0.03 * framenum as f32);
-
+    
+        //heart gui
         for e in &mut myhearts {
             e.mesh.rotate_y(player.camera.camera_angle);
         }
 
-        // let eye = player.camera.eye();
         let forward = (player.pos() - player.camera.eye()).normalize();
         let up = player.camera.up();
         let right = forward.cross(up);
@@ -701,9 +703,9 @@ async fn game(
             myhearts[i].pos = player.pos() + vec3a(0.0, 0.5, 0.0) - offset * (i as f32 - 1.0);
         }
 
+
         window.swap_buffers();
         tokio::time::sleep(DELTA_TIME).await;
-        //dbg!(player.on_ground);
     }
 
     let _ = std::process::Command::new("target/release/gameover").spawn();
