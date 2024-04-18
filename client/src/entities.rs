@@ -177,8 +177,8 @@ pub struct Entity {
     pub reflectance: f32,
     pub bounce: f32,
     pub scale: Vec3A,
-    pub texture_id0: GLuint,
-    pub texture_id1: GLuint,
+    pub texture: GLuint,
+    pub texture_id: i8,
 }
 
 // Entity methods
@@ -196,9 +196,13 @@ impl Entity {
             reflectance: 1.0,
             bounce,
             scale,
-            texture_id0: 0,
-            texture_id1: 0,
+            texture:0,
+            texture_id:0,
         }
+    }
+    // Setter for entity texture
+    pub fn set_texture_id(&mut self, new_texture_id:i8){
+        self.texture_id = new_texture_id
     }
 
     // Setter for entity position
@@ -244,14 +248,15 @@ impl Entity {
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as GLint);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as GLint);
         gl::ActiveTexture(gl::TEXTURE0);
-        let texture0 = image::open("assets/textures/white.jpg")
+        dbg!(&self.texture_id.to_string());
+        let data = image::open("assets/textures/".to_owned()+ &self.texture_id.to_string()+".jpg")
             .expect("Failed to load texture image")
             .flipv()
             .to_rgb8();
-        let mut texture_id0 = 0;
-        let (width, height) = texture0.dimensions();
-        gl::GenTextures(1, &mut texture_id0);
-        gl::BindTexture(gl::TEXTURE_2D, texture_id0);
+        let mut texture = 0;
+        let (width, height) = data.dimensions();
+        gl::GenTextures(1, &mut texture);
+        gl::BindTexture(gl::TEXTURE_2D, texture);
         gl::TexImage2D(
             gl::TEXTURE_2D,
             0,
@@ -261,31 +266,10 @@ impl Entity {
             0,
             gl::RGB,
             gl::UNSIGNED_BYTE,
-            texture0.as_ptr() as *const _,
-        );
-        let texture1 = image::open("assets/textures/dirt.jpg")
-            .expect("Failed to load texture image")
-            .flipv()
-            .to_rgb8();
-        let mut texture_id1 = 0;
-        let (width, height) = texture1.dimensions();
-        gl::GenTextures(1, &mut texture_id1);
-        gl::BindTexture(gl::TEXTURE_2D, texture_id1);
-        gl::TexImage2D(
-            gl::TEXTURE_2D,
-            0,
-            gl::RGB as i32,
-            width as GLint,
-            height as GLint,
-            0,
-            gl::RGB,
-            gl::UNSIGNED_BYTE,
-            texture1.as_ptr() as *const _,
+            data.as_ptr() as *const _,
         );
         gl::GenerateMipmap(gl::TEXTURE_2D);
-
-        self.texture_id0 = texture_id0;
-        self.texture_id1 = texture_id1;
+        self.texture = texture;
     }
 
     // Method to draw the entity on some player camera using a specified shader
@@ -344,13 +328,9 @@ impl Entity {
             object_colour[2],
         );
 
-        if tex_on {
-            gl::BindTexture(gl::TEXTURE_2D, self.texture_id1);
-        } else {
-            gl::BindTexture(gl::TEXTURE_2D, self.texture_id0);
-        }
+        gl::BindTexture(gl::TEXTURE_2D, self.texture);
         gl::BindVertexArray(self.vao);
-        gl::Uniform1i(self.texture_id1 as GLint, 0);
+        gl::Uniform1i(self.texture_id as GLint, 0);
         gl::DrawArrays(gl::TRIANGLES, 0, self.mesh.vertices_normals_tex.len() as i32);
     }
 

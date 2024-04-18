@@ -314,6 +314,7 @@ async fn game(
         vec3a(0.47, 0.41, 0.34),
         0.0,
     );
+    ground.set_texture_id(1);
     ground.set_scale(3.0, 1.0, 3.0);
     ground.reflectance = 1.1;
 
