@@ -3,6 +3,7 @@ extern crate glam;
 use glam::f32::{Mat4, Vec3A};
 use glam::vec3a;
 use std::f32::consts::PI;
+use crate::Entity;
 
 // Abstract Struct
 pub struct CameraBare {
@@ -68,6 +69,56 @@ impl PlayerCamera {
                 near: old_cam.camera_bare.near,
                 far: old_cam.camera_bare.far,
             },
+        }
+    }
+
+    pub fn detect_col(&self, other: &Entity) -> (bool, f32) {
+        // Performing collision detection logic
+        for face in &other.mesh.faces {
+            let a = other.mesh.vertices[face.vertices[0]] + other.pos;
+            let b = other.mesh.vertices[face.vertices[1]] + other.pos;
+            let c = other.mesh.vertices[face.vertices[2]] + other.pos;
+            let face_normal = vec3a(face.normal[0], face.normal[1], face.normal[2]).normalize();
+
+            let d = (a - self.eye()).dot(face_normal);
+
+            // Check if plane intersects sphere
+            if d <= 0.0 {
+                let p = self.eye() - d * face_normal;
+                let n = (b - a).cross(c - a);
+                let area = n.length() * 0.5;
+
+                // Barycentric check if sphere-plane intersection point is in triangle
+                let f = |x: Vec3A, y: Vec3A, z: Vec3A| -> f32 {
+                    let ng = (y - x).cross(z - x);
+                    let m = ng.dot(n);
+                    if m >= 0.0 {
+                        return 0.5 * ng.length() / area;
+                    } else {
+                        return -0.5 * ng.length() / area;
+                    }
+                };
+
+                let alpha = f(p, b, c);
+                let beta = f(a, p, c);
+                let gamma = f(a, b, p);
+
+                // Closure to check if a f32 is in between 0.0 and 1.0
+                let inrange = |x| (x >= 0.0 && x <= 1.0); 
+                if inrange(alpha) && inrange(beta) && inrange(gamma) {
+                    return (true, -d);
+                }
+            }
+        }
+
+        (false, 0.0)
+    }
+
+    pub fn collide(&mut self, ground: &Entity) {
+        let (collide_ground, amt) = self.detect_col(ground);
+        if collide_ground {
+            let hypotenuse = (self.player_pos - self.eye()).length();
+            self.tilt += f32::sin(amt);
         }
     }
 
