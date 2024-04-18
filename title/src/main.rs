@@ -18,16 +18,14 @@ pub fn main() {
             ui.label(" ");
             ui.horizontal(|ui| {
                 let name_label = ui.label("Server IP: ");
-                ui.text_edit_singleline(&mut ip)
-                    .labelled_by(name_label.id);
+                ui.text_edit_singleline(&mut ip).labelled_by(name_label.id);
             });
             ui.label(" ");
             if ui.button("Join Game").clicked() {
                 let result = ip.clone();
-                let _ = Command::new("target/release/client").args([result,]).spawn();
+                let _ = Command::new("target/release/client").args([result]).spawn();
                 ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
             }
         });
     });
 }
-

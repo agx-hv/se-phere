@@ -29,5 +29,3 @@ impl eframe::App for MyApp {
         });
     }
 }
-
-

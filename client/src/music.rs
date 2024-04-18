@@ -1,12 +1,11 @@
+use rodio::OutputStreamHandle;
+use rodio::{source::Source, Decoder};
 use std::fs::File;
 use std::io::BufReader;
-use rodio::OutputStreamHandle;
-use rodio::{Decoder, source::Source};
 
-pub async fn main(){
-}
+pub async fn main() {}
 
-pub fn play(path: &str, stream_handle: &OutputStreamHandle){
+pub fn play(path: &str, stream_handle: &OutputStreamHandle) {
     // Load a sound from a file, using a path relative to Cargo.toml
     let file = BufReader::new(File::open(path).unwrap());
     // Decode that sound file into a source

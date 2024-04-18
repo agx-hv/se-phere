@@ -1,21 +1,21 @@
-use strum_macros::FromRepr;
-use std::net::SocketAddr;
 use glam::*;
+use std::net::SocketAddr;
+use strum_macros::FromRepr;
 
 #[derive(FromRepr, Debug, PartialEq, Copy, Clone)]
 #[repr(u8)]
 pub enum Command {
-    BLOB,              // 0x00
-    STATE,             // 0x01
-    POS,               // 0x02
-    MUT,               // 0x03
-    RSTATE,           // 0x04
-    PPOS,              // 0x05
-    RPPOS,            // 0x06
-    GNDSTATE,          // 0x07
-    RGNDSTATE,        // 0x08
-    LOGIN,             // 0x09
-    SETPID            // 0x10
+    BLOB,      // 0x00
+    STATE,     // 0x01
+    POS,       // 0x02
+    MUT,       // 0x03
+    RSTATE,    // 0x04
+    PPOS,      // 0x05
+    RPPOS,     // 0x06
+    GNDSTATE,  // 0x07
+    RGNDSTATE, // 0x08
+    LOGIN,     // 0x09
+    SETPID,    // 0x10
 }
 
 #[derive(Debug)]
@@ -30,8 +30,8 @@ pub trait AsBytes {
 
 impl AsBytes for Vec3A {
     fn as_bytes(&self) -> Vec<u8> {
-        let mut result = vec!();
-        let (x,y,z) = (self.x, self.y, self.z);
+        let mut result = vec![];
+        let (x, y, z) = (self.x, self.y, self.z);
         result.extend_from_slice(&x.to_be_bytes());
         result.extend_from_slice(&y.to_be_bytes());
         result.extend_from_slice(&z.to_be_bytes());
@@ -59,29 +59,28 @@ impl AsBytes for u32 {
 
 impl AsBytes for u8 {
     fn as_bytes(&self) -> Vec<u8> {
-        vec!(*self)
+        vec![*self]
     }
 }
-
 
 impl Message {
     pub fn new(command: Command) -> Self {
         Message {
             command,
-            payload: vec!(),
+            payload: vec![],
         }
     }
     pub fn push_bytes(&mut self, mut bytes: Vec<u8>) {
         self.payload.append(&mut bytes);
     }
     pub fn get_bytes(&mut self) -> Vec<u8> {
-        let mut bytes = vec!(self.command as u8);
+        let mut bytes = vec![self.command as u8];
         bytes.append(&mut self.payload);
         bytes
     }
     pub fn try_from_data(_socket_addr: SocketAddr, data: &[u8]) -> Option<Self> {
         let command = Command::from_repr(*data.get(0)?);
-        let mut payload = vec!();
+        let mut payload = vec![];
         payload.extend_from_slice(data.get(1..)?);
         Some(Message {
             command: command?,
@@ -95,29 +94,35 @@ impl Message {
         None
     }
     pub fn extract_u32(&self, offset: usize) -> Option<u32> {
-        if offset+4 <= self.payload.len() {
-            return Some(u32::from_be_bytes(self.payload[offset..offset+4].try_into().unwrap()));
+        if offset + 4 <= self.payload.len() {
+            return Some(u32::from_be_bytes(
+                self.payload[offset..offset + 4].try_into().unwrap(),
+            ));
         }
         None
     }
     pub fn extract_u64(&self, offset: usize) -> Option<u64> {
-        if offset+8 <= self.payload.len() {
-            return Some(u64::from_be_bytes(self.payload[offset..offset+8].try_into().unwrap()));
+        if offset + 8 <= self.payload.len() {
+            return Some(u64::from_be_bytes(
+                self.payload[offset..offset + 8].try_into().unwrap(),
+            ));
         }
         None
     }
     pub fn extract_f32(&self, offset: usize) -> Option<f32> {
-        if offset+4 <= self.payload.len() {
-            return Some(f32::from_be_bytes(self.payload[offset..offset+4].try_into().unwrap()));
+        if offset + 4 <= self.payload.len() {
+            return Some(f32::from_be_bytes(
+                self.payload[offset..offset + 4].try_into().unwrap(),
+            ));
         }
         None
     }
     pub fn extract_vec3a(&self, offset: usize) -> Option<Vec3A> {
-        if offset+12 <= self.payload.len() {
-            let x = f32::from_be_bytes(self.payload[offset..offset+4].try_into().unwrap());
-            let y = f32::from_be_bytes(self.payload[offset+4..offset+8].try_into().unwrap());
-            let z = f32::from_be_bytes(self.payload[offset+8..offset+12].try_into().unwrap());
-            return Some(vec3a(x,y,z));
+        if offset + 12 <= self.payload.len() {
+            let x = f32::from_be_bytes(self.payload[offset..offset + 4].try_into().unwrap());
+            let y = f32::from_be_bytes(self.payload[offset + 4..offset + 8].try_into().unwrap());
+            let z = f32::from_be_bytes(self.payload[offset + 8..offset + 12].try_into().unwrap());
+            return Some(vec3a(x, y, z));
         }
         None
     }

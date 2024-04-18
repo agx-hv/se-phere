@@ -1,9 +1,9 @@
+use glam::*;
+use messaging::{AsBytes, Command, Message};
 use std::error::Error;
 use std::net::SocketAddr;
 use std::{env, io};
 use tokio::net::UdpSocket;
-use glam::*;
-use messaging::{Message, Command, AsBytes};
 
 const MUTATION_STACK: usize = 1024; //max for windows is 20199, empirically tested, may change
 #[derive(Debug, Copy, Clone)]
@@ -39,7 +39,7 @@ impl Server {
             state: _,
         } = self;
 
-        let mut player_sockets = vec!();
+        let mut player_sockets = vec![];
         let mut player_buffers: [Option<Vec<u8>>; 32] = Default::default();
         loop {
             // First we check to see if there's a message we need to echo back.
@@ -60,8 +60,8 @@ impl Server {
                                 self.state.num_players += 1;
                             }
                             dbg!(&player_sockets);
-                        },
-                        Command::BLOB => {},
+                        }
+                        Command::BLOB => {}
                         Command::STATE => {
                             if let Some(_pid) = m.extract_u8(0) {
                                 //println!("PID {} wants the gamestate", pid);
@@ -73,10 +73,13 @@ impl Server {
                                 if let Some(v) = &player_buffers[pid as usize] {
                                     dbg!(v);
                                     socket.send_to(v.as_slice(), &peer).await?;
-                                    player_buffers[pid as usize] = None; 
+                                    player_buffers[pid as usize] = None;
                                 }*/
                             } else {
-                                println!("Invalid payload for command: {:?} (0x{:02x})", m.command, b[0]);
+                                println!(
+                                    "Invalid payload for command: {:?} (0x{:02x})",
+                                    m.command, b[0]
+                                );
                             }
                         }
                         Command::POS => {
@@ -85,14 +88,14 @@ impl Server {
                                 if let Some(p) = &mut self.state.players[pid as usize] {
                                     *p.pos = *pos;
                                 } else {
-                                    let p = Some(Player {
-                                        pid,
-                                        pos,
-                                    });
+                                    let p = Some(Player { pid, pos });
                                     self.state.players[pid as usize] = p;
                                 }
                             } else {
-                                println!("Invalid payload for command: {:?} (0x{:02x})", m.command, b[0]);
+                                println!(
+                                    "Invalid payload for command: {:?} (0x{:02x})",
+                                    m.command, b[0]
+                                );
                             }
                         }
                         Command::MUT => {
@@ -105,7 +108,7 @@ impl Server {
 
                                 let data = m.get_bytes();
                                 for p in 0..self.state.num_players {
-                                    let mut v = vec!();
+                                    let mut v = vec![];
                                     v.extend_from_slice(&data);
                                     player_buffers[p as usize] = Some(v);
                                 }
@@ -113,12 +116,13 @@ impl Server {
                                 for ps in &player_sockets {
                                     socket.send_to(&data, &ps).await?;
                                 }*/
-
                             } else {
-                                println!("Invalid payload for command: {:?} (0x{:02x})", m.command, b[0]);
+                                println!(
+                                    "Invalid payload for command: {:?} (0x{:02x})",
+                                    m.command, b[0]
+                                );
                             }
-
-                        },
+                        }
                         Command::PPOS => {
                             if let Some(_pid) = m.extract_u8(0) {
                                 let mut reply = Message::new(Command::RPPOS);
@@ -130,22 +134,30 @@ impl Server {
                                 }
                                 socket.send_to(&reply.get_bytes(), &peer).await?;
                             } else {
-                                println!("Invalid payload for command: {:?} (0x{:02x})", m.command, b[0]);
+                                println!(
+                                    "Invalid payload for command: {:?} (0x{:02x})",
+                                    m.command, b[0]
+                                );
                             }
-                        },
+                        }
                         Command::GNDSTATE => {
                             if let Some(pid) = m.extract_u8(0) {
                                 if let Some(v) = &player_buffers[pid as usize] {
                                     socket.send_to(v.as_slice(), &peer).await?;
-                                    player_buffers[pid as usize] = None; 
+                                    player_buffers[pid as usize] = None;
                                 } else {
                                     //socket.send_to(&[], &peer).await?;
                                 }
                             } else {
-                                println!("Invalid payload for command: {:?} (0x{:02x})", m.command, b[0]);
+                                println!(
+                                    "Invalid payload for command: {:?} (0x{:02x})",
+                                    m.command, b[0]
+                                );
                             }
-                        },
-                        _ => { dbg!(&m); },
+                        }
+                        _ => {
+                            dbg!(&m);
+                        }
                     }
                 } else {
                     println!("Invalid Command 0x{:02x}", b[0]);
