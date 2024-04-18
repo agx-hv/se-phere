@@ -118,7 +118,7 @@ impl PlayerCamera {
         let (collide_ground, amt) = self.detect_col(ground);
         if collide_ground {
             let hypotenuse = (self.player_pos - self.eye()).length();
-            self.tilt += f32::sin(amt);
+            self.tilt += f32::sin(amt/hypotenuse);
         }
     }
 
