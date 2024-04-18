@@ -1,7 +1,7 @@
-// #![allow(non_snake_case)]
-// #![allow(unused_mut)]
-// #![allow(unused_variables)]
-// #![allow(unused_imports)]
+#![allow(non_snake_case)]
+#![allow(unused_mut)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 
 pub mod camera;
 pub mod entities;
@@ -243,7 +243,7 @@ async fn game(
     let mut myscore = 0;
     let mut myhealth = 3;
 
-    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    //let (_stream, stream_handle) = OutputStream::try_default().unwrap();
 
     // initializing entities as Entity
     let mut player = Player::new(
@@ -597,21 +597,27 @@ async fn game(
             player.vec = vec3a(0.0, 0.0, 0.0);
             if has_goal {
                 if myscore == 9 {
+                    let _ = std::process::Command::new("target/release/image-ui")
+                        .args(["win"])
+                        .spawn();
                     break;
                 }
                 myscore += 1;
                 let path = ["assets/mesh/", &myscore.to_string(), ".stl"].join("");
                 score_stl.mesh = Mesh::new(&path, vec3a(1.0, 1.0, 1.0));
-                music::play("assets/sounds/yay.mp3",&stream_handle);
+                //music::play("assets/sounds/yay.mp3",&stream_handle);
             } else {
                 myhealth -= 1;
                 if myhealth == 0 {
+                    let _ = std::process::Command::new("target/release/image-ui")
+                        .args(["lose"])
+                        .spawn();
                     break;
                 }
                 myhearts.pop();
                 let path = ["assets/mesh/", &myscore.to_string(), ".stl"].join("");
                 score_stl.mesh = Mesh::new(&path, vec3a(1.0, 1.0, 1.0));
-                music::play("assets/sounds/oof.mp3",&stream_handle);
+                //music::play("assets/sounds/oof.mp3",&stream_handle);
             }
         }
 
@@ -651,29 +657,27 @@ async fn game(
         //collision detection for camera
         player.camera.collide(&ground);
 
-        //score gui
+        //score rotation
         score_stl.mesh.rotate_y(0.03 * framenum as f32);
+        score_stl.pos = player.pos() + vec3a(0.0, 0.3, 0.0);
     
-        //heart gui
+
+        //heart rotation
         for heart in &mut myhearts {
             heart.mesh.rotate_y(player.camera.camera_angle);
         }
 
-        let forward = (player.pos() - player.camera.eye()).normalize();
-        let up = player.camera.up();
-        let right = forward.cross(up);
-        goal_2d.pos = player.camera.eye() + forward * 0.02 - right * 0.016 - up * 0.01;
-        score_stl.pos = player.pos() + vec3a(0.0, 0.3, 0.0);
-
         let offset = 0.13
             * player
-                .camera
-                .up()
-                .cross(player.pos() - player.camera.eye())
-                .normalize();
+            .camera
+            .up()
+            .cross(player.pos() - player.camera.eye())
+            .normalize();
+
         for i in 0..myhearts.len() {
             myhearts[i].pos = player.pos() + vec3a(0.0, 0.5, 0.0) - offset * (i as f32 - 1.0);
         }
+
 
         //draw players
         unsafe {
@@ -702,7 +706,6 @@ async fn game(
         tokio::time::sleep(DELTA_TIME).await;
     }
 
-    let _ = std::process::Command::new("target/release/gameover").spawn();
 
     Ok(())
 }
