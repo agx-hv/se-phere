@@ -295,7 +295,7 @@ async fn game(
     score.set_scale(0.0, 0.0, 0.0);
     other_player_entities.push((newplayer, score));
 
-    let mut myscore_entity = Entity::new("assets/mesh/0.stl", ORIGIN, vec3a(0.1, 0.5, 0.2), 1.0);
+    let mut score_stl = Entity::new("assets/mesh/0.stl", ORIGIN, vec3a(0.1, 0.5, 0.2), 1.0);
 
     let mut myhearts = vec![];
     for _ in 0..3 {
@@ -426,7 +426,7 @@ async fn game(
         ground.gl_init();
         rt_marker.gl_init();
         goal_2d.gl_init();
-        myscore_entity.gl_init();
+        score_stl.gl_init();
 
         for e in &mut myhearts {
             e.gl_init();
@@ -571,7 +571,7 @@ async fn game(
             // goal_2d.draw(&mut player.camera, &lighting_program,false);
 
             goal.draw(&mut player.camera, &lighting_program, false);
-            myscore_entity.draw(&mut player.camera, &lighting_program, false);
+            score_stl.draw(&mut player.camera, &lighting_program, false);
             for e in &mut myhearts {
                 e.draw(&mut player.camera, &lighting_program, false);
             }
@@ -593,7 +593,35 @@ async fn game(
         )); // for the player to move towards
         player.mvhelper();
 
+        /* 
+        
+        COLLISION DETECTION
+
+         */
+        
+        //collision detection with goal
         let has_goal = player.detect_col(&goal).0;
+
+        //collision detection for ground
+        if player.detect_col(&ground).0 {
+            player.collide(&ground);
+            player.on_ground = true;
+        };
+
+        //collision detection for other players
+        for i in 0..other_player_entities.len() {
+            if i != player.player_id.into() {
+                if player.detect_col(&other_player_entities[i].0).0 {
+                    player.collide(&other_player_entities[i].0);
+                }
+            }
+            other_player_entities[i]
+                .1
+                .mesh
+                .rotate_y(0.15 * framenum as f32);
+        }
+
+        //respawn
         if has_goal || player.entity.pos.y < -5.0 {
             let theta = rng.gen_range(0.0..2.0 * PI);
             let theta2 = rng.gen_range(0.0..2.0 * PI);
@@ -602,14 +630,15 @@ async fn game(
                 0.5,
                 PLAYER_SPAWN_RADIUS * f32::sin(theta),
             );
-            let player_init_cam = camera::PlayerCamera::update(
+
+            player.entity.set_pos(player_init_pos);
+            let old_camera = player.camera;
+            player.camera = camera::PlayerCamera::update(
                 player_init_pos,
                 scr_w as f32 / scr_h as f32,
                 theta2,
-                player.camera,
+                old_camera,
             );
-            player.entity.set_pos(player_init_pos);
-            player.camera = player_init_cam;
             player.vec = vec3a(0.0, 0.0, 0.0);
             if has_goal {
                 if myscore == 9 {
@@ -617,7 +646,7 @@ async fn game(
                 }
                 myscore += 1;
                 let path = ["assets/mesh/", &myscore.to_string(), ".stl"].join("");
-                myscore_entity.mesh = Mesh::new(&path, vec3a(1.0, 1.0, 1.0));
+                score_stl.mesh = Mesh::new(&path, vec3a(1.0, 1.0, 1.0));
                 music::play("assets/yay.mp3",&stream_handle);
             } else {
                 myhealth -= 1;
@@ -626,12 +655,12 @@ async fn game(
                 }
                 myhearts.pop();
                 let path = ["assets/mesh/", &myscore.to_string(), ".stl"].join("");
-                myscore_entity.mesh = Mesh::new(&path, vec3a(1.0, 1.0, 1.0));
+                score_stl.mesh = Mesh::new(&path, vec3a(1.0, 1.0, 1.0));
                 music::play("assets/oof.mp3",&stream_handle);
             }
         }
 
-       //keyboard control
+       //TODO COMMENT
         player.camera.player_pos = player.pos();
         player.camera.camera_angle +=
             (if f32::abs(player.vec.x) > 0.0001 || f32::abs(player.vec.z) > 0.0001 {
@@ -644,6 +673,10 @@ async fn game(
                 * CAMERA_DELTA
                 * (keystates[1] - keystates[3]) as f32; // ks[1]-ks[3] as a & d keys - left/right
 
+        // send position to server
+        let p: [u8; 14] = player.pos_cmd();
+        socket.send(&p).await?;
+        
         //mouse control
         if x < scr_w as f64 * PAN_TRESHOLD_RATIO {
             player.camera.camera_angle += CAMERA_DELTA;
@@ -657,41 +690,21 @@ async fn game(
             player.camera.tilt += CAMERA_DELTA;
         }
 
-        // socket
-        let p = player.pos_cmd();
-        socket.send(&p).await?;
+        
 
-        //collision detection for player
-        if player.detect_col(&ground).0 {
-            player.collide(&ground);
-            player.on_ground = true;
-        };
-
-        for i in 0..other_player_entities.len() {
-            if i != player.player_id.into() {
-                if player.detect_col(&other_player_entities[i].0).0 {
-                    player.collide(&other_player_entities[i].0);
-                }
-            }
-            other_player_entities[i]
-                .1
-                .mesh
-                .rotate_y(0.15 * framenum as f32);
-        }
-
-        // score gui
-        myscore_entity.mesh.rotate_y(0.03 * framenum as f32);
+        //score gui
+        score_stl.mesh.rotate_y(0.03 * framenum as f32);
     
         //heart gui
-        for e in &mut myhearts {
-            e.mesh.rotate_y(player.camera.camera_angle);
+        for heart in &mut myhearts {
+            heart.mesh.rotate_y(player.camera.camera_angle);
         }
 
         let forward = (player.pos() - player.camera.eye()).normalize();
         let up = player.camera.up();
         let right = forward.cross(up);
         goal_2d.pos = player.camera.eye() + forward * 0.02 - right * 0.016 - up * 0.01;
-        myscore_entity.pos = player.pos() + vec3a(0.0, 0.3, 0.0);
+        score_stl.pos = player.pos() + vec3a(0.0, 0.3, 0.0);
 
         let offset = 0.13
             * player
