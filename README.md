@@ -17,7 +17,6 @@ Sphere.io is a multiplayer 3D game developed within the constraints of the OpenG
 - Download Windows Build Tools - <https://visualstudio.microsoft.com/downloads/>  
  - Check C++ Tools  
 - Download CMake - <https://cmake.org/download/>
-
 Clone the repository
 ```bash
 git clone https://github.com/agx-hv/se-phere
@@ -44,7 +43,7 @@ cargo build --release
 - Get IP of server host via ipconfig
 - Run the RunServer.sh file or use the following commands:
 
-Build and run server
+Build and Run Server
 ```bash
 cargo run --bin server --release
 ```
@@ -52,12 +51,12 @@ cargo run --bin server --release
 ### Client Config
 - Run the RunClient.sh file or use the following commands:
 
-Build and run client
+Build and Run Client
 ```bash
 cargo run --bin title --release
 ```
 
-### Run client
+### Run Client
 Windows
 ```bash
 target\release\title.exe
@@ -70,14 +69,22 @@ target/release/title
 
 
 ## Instructions
+
+### Keyboard Controls
 ```W``` key to Roll Forward  
 ```S``` key to Roll Backward  
 ```A``` key to Spin Left  
 ```D``` key to Spin Right  
 ```Spacebar``` to Jump  
-```LeftClick``` to Raise Ground  
-```RightClick``` to Lower Ground  
+```F``` key to Toggle Fullscreen
 ```Esc```  to Quit Application
+
+### Mouse Controls
+```LeftClick``` to Raise Ground  
+```RightClick``` to Lower Ground
+```ScrollForward``` to Zoom Camera In
+```ScrollBackward``` to Zoom Camera Out
+Move Cursor to Screen Edges to Spin Camera
 
 ## Gameplay Loop
 
