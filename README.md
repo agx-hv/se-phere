@@ -6,7 +6,7 @@
     <b>Sphere.io - A Multiplayer 3D Game Development Project</b>
 </p>
 
-Sphere.io is a multiplayer 3D game developed within the constraints of the OpenGL graphics module. Players control spheres in a dynamically evolving landscape, aiming to reach a central goal while strategically reshaping the terrain to impede opponents' progress. The game features a custom physics engine, realistic sphere interactions, and minimalist aesthetics focused on gameplay mechanics and user interaction.
+Sphere.io is a multiplayer 3D game developed within the constraints of the OpenGL graphics module. Players control spheres in a dynamically evolving landscape, aiming to reach a central goal while strategically reshaping the terrain to impede opponents' progress. The game features a custom physics engine, realistic sphere interactions, and minimalist aesthetics focused on gameplay mechanics and user interaction.      
 
 
 ## Getting Started
@@ -64,7 +64,7 @@ target\release\title.exe
 
 Unix
 ```bash
-target/release/title
+target/release/title    
 ```
 
 
@@ -76,15 +76,15 @@ target/release/title
 ```A``` key to Spin Left  
 ```D``` key to Spin Right  
 ```Spacebar``` to Jump  
-```F``` key to Toggle Fullscreen
+```F``` key to Toggle Fullscreen  
 ```Esc```  to Quit Application
 
 ### Mouse Controls
 ```LeftClick``` to Raise Ground  
-```RightClick``` to Lower Ground
-```ScrollForward``` to Zoom Camera In
-```ScrollBackward``` to Zoom Camera Out
-Move Cursor to Screen Edges to Spin Camera
+```RightClick``` to Lower Ground  
+```ScrollForward``` to Zoom Camera In  
+```ScrollBackward``` to Zoom Camera Out  
+Move Cursor to Screen Edges to Spin Camera      
 
 ## Gameplay Loop
 
