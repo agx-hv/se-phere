@@ -303,12 +303,9 @@ async fn game(
         myhearts.push(heart_stl);
     }
 
-    // let players_pos = [vec3a(0.0,0.0,0.0); 64];
-
     let mut ground = Entity::new(
         "assets/mesh/ground.stl",
         ORIGIN,
-        // 0.8*vec3a(0.47, 0.41, 0.34),
         vec3a(0.47, 0.41, 0.34),
         0.0,
     );
@@ -416,6 +413,7 @@ async fn game(
         lighting_program.set_vec3fv(b"lightColor\0", MAX_LIGHTS, &light_colors[0]);
         lighting_program.set_vec3fv(b"lightPos\0", MAX_LIGHTS, &light_positions[0]);
 
+        //init graphics (vertices, normals, textures)
         player.entity.gl_init();
         for (pe, score) in &mut other_player_entities {
             pe.gl_init();
@@ -440,7 +438,7 @@ async fn game(
 
     //loop
     while !window.should_close() {
-
+        //increase frame number
         framenum += 1;
         
         glfw.poll_events();
@@ -544,7 +542,7 @@ async fn game(
         
         /* 
         
-        COLLISION DETECTION
+        COLLISION DETECTION (check under camera control for collide camera, it has to be there)
 
          */
         
@@ -570,7 +568,7 @@ async fn game(
                 .mesh
                 .rotate_y(0.15 * framenum as f32);
         }
-
+    
         /* 
         
         END COLLISION DETECTION
@@ -634,7 +632,7 @@ async fn game(
                 * CAMERA_DELTA
                 * (keystates[1] - keystates[3]) as f32; // ks[1]-ks[3] as a & d keys - left/right
         
-        //mouse control
+        //camera control
         if x < scr_w as f64 * PAN_TRESHOLD_RATIO {
             player.camera.camera_angle += CAMERA_DELTA;
         } else if x > scr_w as f64 * (1.0 - PAN_TRESHOLD_RATIO) {
@@ -649,6 +647,9 @@ async fn game(
         } else if y > scr_h as f64 * (1.0 - TILT_TRESHOLD_RATIO) {
             player.camera.tilt += CAMERA_DELTA;
         }        
+
+        //collision detection for camera
+        player.camera.collide(&ground);
 
         //score gui
         score_stl.mesh.rotate_y(0.03 * framenum as f32);
