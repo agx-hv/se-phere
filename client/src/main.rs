@@ -442,18 +442,76 @@ async fn game(
 
     //loop
     while !window.should_close() {
-        framenum += 1;
-        let pvec = &player_positions;
-        let gvec = &gnd_muts;
 
-        let mut np = 0;
+        framenum += 1;
+        
+        glfw.poll_events();
+        window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
+        for (_, event) in glfw::flush_messages(&events) {
+            handle_window_event(&mut glfw, &mut window, event, &mut player, &mut keystates);
+        }
+
+        //update aspect ratio to window size
+        (scr_w, scr_h) = window.get_size();
+        player.camera.camera_bare.aspect = scr_w as f32 / scr_h as f32;
+        unsafe { gl::Viewport(0, 0, scr_w, scr_h) }
+
+        let (x, y) = window.get_cursor_pos();
+        
+        // ground mesh selection / mouse tracking using rt_marker
+        let raycast = cursor_raycast_and_animate(&mut player, x, scr_w, y, scr_h, &mut ground, &mut rt_marker, &mut window);
+
+        //send intention to mutate
+        if keystates[10] == 1 || keystates[11] == 1 {
+            if rt_marker.pos.xz().distance(ORIGIN.xz()) >= GROUND_IMMUTABLE_RADIUS {
+                let mut m = Message::new(Command::MUT);
+                if keystates[10] == 1 && keystates[11] == 0 {
+                    m.push_bytes(player.player_id.as_bytes());
+                    m.push_bytes((raycast as u32).as_bytes());
+                    m.push_bytes(player.ability.ground_mut_power.as_bytes());
+                    listener.send(&m.get_bytes()).await?;
+                }
+                if keystates[10] == 0 && keystates[11] == 1 {
+                    m.push_bytes(player.player_id.as_bytes());
+                    m.push_bytes((raycast as u32).as_bytes());
+                    m.push_bytes((-player.ability.ground_mut_power).as_bytes());
+                    listener.send(&m.get_bytes()).await?;
+                }
+            }
+        }
+
+        //mutate mesh
+        let gvec = &gnd_muts;
+        let (idx, amt) = &gvec[1];
+        ground.mesh.mutate(
+            idx.load(Ordering::Relaxed) as usize,
+            vec3a(0.0, 1.0, 0.0),
+            f32::from_bits(amt.load(Ordering::Relaxed)),
+        );
+        idx.store(0, Ordering::Relaxed);
+        amt.store(0, Ordering::Relaxed);
+        
+        // player movement
+        player.mv(vec3a(
+            (keystates[0] - keystates[2]) as f32
+                * -MOVEMENT_DELTA
+                * f32::sin(player.camera.camera_angle),
+            0.0, // use camera angle as direction
+            (keystates[0] - keystates[2]) as f32
+                * -MOVEMENT_DELTA
+                * f32::cos(player.camera.camera_angle),
+        )); // for the player to move towards
+        player.mvhelper();
+        
+        //init emeny spheres
+        let pvec = &player_positions;
+        let mut np = 0; // number of players
         for p in pvec {
             if p.0.load(Ordering::Relaxed) == 255 {
                 break;
             }
             np += 1;
         }
-
         if np > other_player_entities.len() as u8 {
             let mut newplayer = Entity::new(
                 "assets/mesh/small_sphere.stl",
@@ -469,7 +527,7 @@ async fn game(
             other_player_entities.push((newplayer, score));
         }
 
-        // let mut offset = 0;
+        //get enemy position
         for p in pvec {
             let pid = p.0.load(Ordering::Relaxed);
             if pid == 255 {
@@ -485,121 +543,14 @@ async fn game(
             other_player_entities[pid as usize].0.pos = vec3a(x, y, z);
             other_player_entities[pid as usize].1.pos = vec3a(x, y, z) + vec3a(0.0, 0.3, 0.0);
         }
-
-        let (i, a) = &gvec[1];
-        ground.mesh.mutate(
-            i.load(Ordering::Relaxed) as usize,
-            vec3a(0.0, 1.0, 0.0),
-            f32::from_bits(a.load(Ordering::Relaxed)),
-        );
-        i.store(0, Ordering::Relaxed);
-        a.store(0, Ordering::Relaxed);
-
-        //dbg!(&pvec[0..2]);
-        //dbg!(&np);
-        //dbg!(&other_player_entities.len());
-
-        glfw.poll_events();
-        window.glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
-        for (_, event) in glfw::flush_messages(&events) {
-            handle_window_event(&mut glfw, &mut window, event, &mut player, &mut keystates);
-        }
-
-        (scr_w, scr_h) = window.get_size();
-        player.camera.camera_bare.aspect = scr_w as f32 / scr_h as f32;
-
-        unsafe { gl::Viewport(0, 0, scr_w, scr_h) }
-
-        // ground mesh selection / mouse tracking using rt_marker
-        let (x, y) = window.get_cursor_pos();
-
-        let mut i: usize = 0;
-
-        let p = player.camera.proj_mat();
-        let v = player.camera.view_mat();
-        let pvi = (p * v).inverse();
-        let ndc_x = (x as f32 / scr_w as f32 - 0.5) * 2.0;
-        let ndc_y = (y as f32 / scr_h as f32 - 0.5) * -2.0;
-        let rs = vec4(ndc_x, ndc_y, -1.0, 1.0);
-        let re = vec4(ndc_x, ndc_y, 0.0, 1.0);
-        let mut rsw = pvi * rs;
-        rsw /= rsw[3];
-        let mut rew = pvi * re;
-        rew /= rew[3];
-        let eye = player.camera.eye();
-        let raydir: Vec3A = (rew - rsw).normalize().into();
-
-        if raydir.dot(vec3a(0.0, 1.0, 0.0)) < 0.0 {
-            i = ground.closest_vertex_index(rt_marker.pos.xz());
-            let ground_y = ground.mesh.vertices[i].y;
-            rt_marker.pos = eye - raydir * (eye.y - ground_y) / raydir.y;
-            if rt_marker.pos.xz().distance(ORIGIN.xz()) < GROUND_IMMUTABLE_RADIUS {
-                window.set_cursor(Some(Cursor::standard(Arrow)));
-            } else {
-                window.set_cursor(Some(Cursor::standard(VResize)));
-            }
-        }
-
-        if keystates[10] == 1 || keystates[11] == 1 {
-            if rt_marker.pos.xz().distance(ORIGIN.xz()) >= GROUND_IMMUTABLE_RADIUS {
-                let mut m = Message::new(Command::MUT);
-                if keystates[10] == 1 && keystates[11] == 0 {
-                    //ground.mesh.mutate(i, vec3a(0.0,1.0,0.0), player.ability.ground_mut_power);
-                    m.push_bytes(player.player_id.as_bytes());
-                    m.push_bytes((i as u32).as_bytes());
-                    m.push_bytes(player.ability.ground_mut_power.as_bytes());
-                    listener.send(&m.get_bytes()).await?;
-                }
-                if keystates[10] == 0 && keystates[11] == 1 {
-                    //ground.mesh.mutate(i, vec3a(0.0,-1.0,0.0), player.ability.ground_mut_power);
-                    m.push_bytes(player.player_id.as_bytes());
-                    m.push_bytes((i as u32).as_bytes());
-                    m.push_bytes((-player.ability.ground_mut_power).as_bytes());
-                    listener.send(&m.get_bytes()).await?;
-                }
-            }
-        }
-
-        unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-
-            player
-                .entity
-                .draw(&mut player.camera, &lighting_program, false);
-
-            ground.draw(&mut player.camera, &lighting_program, true);
-
-            // goal_2d.draw(&mut player.camera, &lighting_program,false);
-
-            goal.draw(&mut player.camera, &lighting_program, false);
-            score_stl.draw(&mut player.camera, &lighting_program, false);
-            for e in &mut myhearts {
-                e.draw(&mut player.camera, &lighting_program, false);
-            }
-            for (pe, _score) in &mut other_player_entities {
-                pe.draw(&mut player.camera, &lighting_program, false);
-                //score.draw(&mut player.camera, &lighting_program,false);
-            }
-        }
-
-        // player loop
-        player.mv(vec3a(
-            (keystates[0] - keystates[2]) as f32
-                * -MOVEMENT_DELTA
-                * f32::sin(player.camera.camera_angle),
-            0.0, // use camera angle as direction
-            (keystates[0] - keystates[2]) as f32
-                * -MOVEMENT_DELTA
-                * f32::cos(player.camera.camera_angle),
-        )); // for the player to move towards
-        player.mvhelper();
-
+        
         /* 
         
         COLLISION DETECTION
 
          */
         
+
         //collision detection with goal
         let has_goal = player.detect_col(&goal).0;
 
@@ -622,6 +573,13 @@ async fn game(
                 .rotate_y(0.15 * framenum as f32);
         }
 
+        /* 
+        
+        END COLLISION DETECTION
+
+         */
+
+        
         //respawn
         if has_goal || player.entity.pos.y < -5.0 {
             let theta = rng.gen_range(0.0..2.0 * PI);
@@ -661,7 +619,11 @@ async fn game(
             }
         }
 
-       //TODO COMMENT
+        // send position to server
+        let p: [u8; 14] = player.pos_cmd();
+        socket.send(&p).await?;
+
+       //move camera to player
         player.camera.player_pos = player.pos();
         player.camera.camera_angle +=
             (if f32::abs(player.vec.x) > 0.0001 || f32::abs(player.vec.z) > 0.0001 {
@@ -673,10 +635,6 @@ async fn game(
             }) as f32
                 * CAMERA_DELTA
                 * (keystates[1] - keystates[3]) as f32; // ks[1]-ks[3] as a & d keys - left/right
-
-        // send position to server
-        let p: [u8; 14] = player.pos_cmd();
-        socket.send(&p).await?;
         
         //mouse control
         if x < scr_w as f64 * PAN_TRESHOLD_RATIO {
@@ -689,9 +647,7 @@ async fn game(
             player.camera.tilt -= CAMERA_DELTA;
         } else if y > scr_h as f64 * (1.0 - TILT_TRESHOLD_RATIO) {
             player.camera.tilt += CAMERA_DELTA;
-        }
-
-        
+        }        
 
         //score gui
         score_stl.mesh.rotate_y(0.03 * framenum as f32);
@@ -717,6 +673,28 @@ async fn game(
             myhearts[i].pos = player.pos() + vec3a(0.0, 0.5, 0.0) - offset * (i as f32 - 1.0);
         }
 
+        //draw players
+        unsafe {
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+
+            player
+                .entity
+                .draw(&mut player.camera, &lighting_program, false);
+
+            ground.draw(&mut player.camera, &lighting_program, true);
+
+            // goal_2d.draw(&mut player.camera, &lighting_program,false);
+
+            goal.draw(&mut player.camera, &lighting_program, false);
+            score_stl.draw(&mut player.camera, &lighting_program, false);
+            for e in &mut myhearts {
+                e.draw(&mut player.camera, &lighting_program, false);
+            }
+            for (pe, _score) in &mut other_player_entities {
+                pe.draw(&mut player.camera, &lighting_program, false);
+                //score.draw(&mut player.camera, &lighting_program,false);
+            }
+        }
 
         window.swap_buffers();
         tokio::time::sleep(DELTA_TIME).await;
@@ -725,6 +703,36 @@ async fn game(
     let _ = std::process::Command::new("target/release/gameover").spawn();
 
     Ok(())
+}
+
+fn cursor_raycast_and_animate(player: &mut Player, x: f64, scr_w: i32, y: f64, scr_h: i32, ground: &mut Entity, rt_marker: &mut Entity, window: &mut glfw::PWindow) -> usize {
+    let mut raycast: usize = 0;
+    let p = player.camera.proj_mat();
+    let v = player.camera.view_mat();
+    let pvi = (p * v).inverse();
+    let ndc_x = (x as f32 / scr_w as f32 - 0.5) * 2.0;
+    let ndc_y = (y as f32 / scr_h as f32 - 0.5) * -2.0;
+    let rs = vec4(ndc_x, ndc_y, -1.0, 1.0);
+    let re = vec4(ndc_x, ndc_y, 0.0, 1.0);
+    let mut rsw = pvi * rs;
+    rsw /= rsw[3];
+    let mut rew = pvi * re;
+    rew /= rew[3];
+    let eye = player.camera.eye();
+    let raydir: Vec3A = (rew - rsw).normalize().into();
+
+    //set cursor animation
+    if raydir.dot(vec3a(0.0, 1.0, 0.0)) < 0.0 {
+        raycast = ground.closest_vertex_index(rt_marker.pos.xz());
+        let ground_y = ground.mesh.vertices[raycast].y;
+        rt_marker.pos = eye - raydir * (eye.y - ground_y) / raydir.y;
+        if rt_marker.pos.xz().distance(ORIGIN.xz()) < GROUND_IMMUTABLE_RADIUS {
+            window.set_cursor(Some(Cursor::standard(Arrow)));
+        } else {
+            window.set_cursor(Some(Cursor::standard(VResize)));
+        }
+    }
+    raycast
 }
 
 fn handle_window_event(
