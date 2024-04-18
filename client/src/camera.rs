@@ -1,9 +1,12 @@
+//imports
 extern crate glam;
 use glam::f32::{Mat4, Vec3A};
 use glam::vec3a;
 use std::f32::consts::PI;
 
+// Abstract Struct
 pub struct CameraBare {
+    // For use in camera
     pub fov: f32,
     pub aspect: f32,
     pub near: f32,
@@ -11,7 +14,8 @@ pub struct CameraBare {
 }
 
 impl CameraBare {
-    pub fn proj_mat(&mut self) -> Mat4 {
+    //get a projection matrix
+    fn proj_mat(&mut self) -> Mat4 {
         Mat4::perspective_rh(
             self.fov.into(),
             self.aspect.into(),
@@ -21,51 +25,7 @@ impl CameraBare {
     }
 }
 
-pub struct FPSCamera {
-    pub eye: Vec3A,
-    pub up: Vec3A,
-    pub target: Vec3A,
-    pub camera_bare: CameraBare,
-}
-
-impl FPSCamera {
-    pub fn new(eye: Vec3A, up: Vec3A, target: Vec3A, aspect: f32) -> Self {
-        FPSCamera {
-            eye,
-            up,
-            target,
-            camera_bare: CameraBare {
-                fov: PI / 3.0,
-                aspect,
-                near: 0.01,
-                far: 100.0,
-            },
-        }
-    }
-
-    pub fn update(eye: Vec3A, up: Vec3A, target: Vec3A, aspect: f32, old_cam: FPSCamera) -> Self {
-        FPSCamera {
-            eye,
-            up,
-            target,
-            camera_bare: CameraBare {
-                fov: old_cam.camera_bare.fov,
-                aspect,
-                near: old_cam.camera_bare.near,
-                far: old_cam.camera_bare.far,
-            },
-        }
-    }
-
-    pub fn view_mat(&mut self) -> Mat4 {
-        Mat4::look_at_rh(self.eye.into(), self.target.into(), self.up.into())
-    }
-
-    pub fn proj_mat(&mut self) -> Mat4 {
-        self.camera_bare.proj_mat()
-    }
-}
-
+// Camera
 pub struct PlayerCamera {
     pub player_pos: Vec3A, //players coords
     pub camera_angle: f32, // 0 to 2pi, 0 is behind player
@@ -75,6 +35,7 @@ pub struct PlayerCamera {
 }
 
 impl PlayerCamera {
+    //helper function to create new camera, with defaults
     pub fn new(player_pos: Vec3A, aspect: f32, camera_angle: f32) -> Self {
         PlayerCamera {
             player_pos,
@@ -89,7 +50,7 @@ impl PlayerCamera {
             },
         }
     }
-
+    // helper function to update camera to 'new' sphere when respawn
     pub fn update(
         player_pos: Vec3A,
         aspect: f32,
@@ -110,14 +71,16 @@ impl PlayerCamera {
         }
     }
 
+    //main function to get view matrix
     pub fn view_mat(&mut self) -> Mat4 {
         if self.radius < 0.1 {
-            self.radius = 0.1
+            self.radius = 0.1 //prevents zooming in too close
         }
         if self.camera_angle < 0.0 {
             self.camera_angle += 2.0 * PI; // allows for camera to spin horinzontaly constantly around player while preventing int overflow
         }
         self.camera_angle = self.camera_angle % (2.0 * PI);
+
         if self.tilt > PI / 2.0 {
             self.tilt = PI / 2.0; // clip max tilt to 90deg
         } else if self.tilt < 1e-6 {
@@ -127,6 +90,7 @@ impl PlayerCamera {
         Mat4::look_at_rh(self.eye().into(), self.player_pos.into(), self.up().into())
     }
 
+    //helper function to get eye vector
     pub fn eye(&self) -> Vec3A {
         vec3a(
             self.radius * f32::sin(self.camera_angle) * f32::cos(self.tilt),
@@ -135,6 +99,7 @@ impl PlayerCamera {
         ) + self.player_pos
     }
 
+    //helper function to get up vector
     pub fn up(&self) -> Vec3A {
         Vec3A::normalize(vec3a(
             self.radius * f32::sin(self.camera_angle) * -f32::sin(self.tilt),
@@ -143,6 +108,7 @@ impl PlayerCamera {
         ))
     }
 
+    //gets projection matrix
     pub fn proj_mat(&mut self) -> Mat4 {
         self.camera_bare.proj_mat()
     }
