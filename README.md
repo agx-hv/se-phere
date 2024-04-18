@@ -18,6 +18,11 @@ Sphere.io is a multiplayer 3D game developed within the constraints of the OpenG
  - Check C++ Tools  
 - Download CMake - <https://cmake.org/download/>
 
+Clone the repository
+```bash
+git clone https://github.com/agx-hv/se-phere
+```
+
 ### Installation (Mac/Linux):
 
 Install Rust via rustup
@@ -31,17 +36,36 @@ git clone https://github.com/agx-hv/se-phere
 
 ## Running The Game
 
+Build all binaries
+```bash
+cargo build --release
+```
 ### Server Config
 - Get IP of server host via ipconfig
-- Run the RunServer.sh file or use the following code:
+- Run the RunServer.sh file or use the following commands:
+
+Build and run server
 ```bash
 cargo run --bin server --release
 ```
 
 ### Client Config
-- Run the RunClient.sh file or use the following code:
+- Run the RunClient.sh file or use the following commands:
+
+Build and run client
 ```bash
 cargo run --bin title --release
+```
+
+### Run client
+Windows
+```bash
+target\release\title.exe
+```
+
+Unix
+```bash
+target/release/title
 ```
 
 
