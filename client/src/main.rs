@@ -27,7 +27,7 @@ use rand::rngs::ThreadRng;
 use std::{env, f32::consts::PI, time};
 
 // sound
-use rodio::{Decoder, OutputStream, source::Source};
+use rodio::{Decoder, OutputStream, source::Source}; // dont remove import, for comme
 
 // net, tokio, messaging
 use messaging::{AsBytes, Command, Message};
@@ -644,7 +644,10 @@ async fn game(
         }
 
         if y < scr_h as f64 * TILT_TRESHOLD_RATIO {
-            player.camera.tilt -= CAMERA_DELTA;
+            let (c, _) = player.camera.detect_col(&ground);
+            if !c && player.camera.eye().y > 0.2 {
+                player.camera.tilt -= CAMERA_DELTA;
+            }
         } else if y > scr_h as f64 * (1.0 - TILT_TRESHOLD_RATIO) {
             player.camera.tilt += CAMERA_DELTA;
         }        
