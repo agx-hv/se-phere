@@ -3,7 +3,8 @@
 // #![allow(unused_variables)]
 // #![allow(unused_imports)]
 
-//imports
+
+const WSL:bool = false; // if youre on wsl, music breaks, this disables music when you set it to true
 
 pub mod camera;
 pub mod entities;
@@ -15,6 +16,7 @@ pub mod shader;
 use entities::*;
 use meshloader::Mesh;
 use rand::{thread_rng, Rng};
+use rodio::OutputStreamHandle;
 use shader::ShaderProgram;
 
 use glam::f32::Vec3A;
@@ -245,9 +247,17 @@ async fn game(
     let mut myscore = 0;
     let mut myhealth = 3;
 
-    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
 
-    // initializing entities as Entity
+        let mut _stream: OutputStream ;
+        let mut stream_handle: OutputStreamHandle;
+        
+        if !WSL{
+            (_stream, stream_handle) = OutputStream::try_default().unwrap();
+        }
+
+        
+        
+    // initializing entities a s Entity
     let mut player = Player::new(
         "assets/mesh/small_sphere.stl",
         player_init_pos,
@@ -606,7 +616,10 @@ async fn game(
                 myscore += 1;
                 let path = ["assets/mesh/", &myscore.to_string(), ".stl"].join("");
                 score_stl.mesh = Mesh::new(&path, vec3a(1.0, 1.0, 1.0));
-                music::play("assets/sounds/yay.mp3",&stream_handle);
+                if !WSL{
+                    music::play("assets/sounds/yay.mp3",&stream_handle);
+                }
+                
             } else {
                 myhealth -= 1;
                 if myhealth == 0 {
@@ -615,7 +628,9 @@ async fn game(
                 myhearts.pop();
                 let path = ["assets/mesh/", &myscore.to_string(), ".stl"].join("");
                 score_stl.mesh = Mesh::new(&path, vec3a(1.0, 1.0, 1.0));
-                music::play("assets/sounds/oof.mp3",&stream_handle);
+                if !WSL{
+                    music::play("assets/sounds/oof.mp3",&stream_handle);
+                }
             }
         }
 
