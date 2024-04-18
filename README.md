@@ -12,7 +12,7 @@ Sphere.io is a multiplayer 3D game developed within the constraints of the OpenG
 ## Getting Started
 
 ### Installation
-- Download Rit - <https://git-scm.com/downloads>
+- Download Git - <https://git-scm.com/downloads>
 - Download Rust - <https://www.rust-lang.org/learn/get-started>
 - Download Windows Build Tools - <https://visualstudio.microsoft.com/downloads/>  
  - Check C++ Tools  
