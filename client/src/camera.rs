@@ -128,7 +128,10 @@ impl PlayerCamera {
             self.radius = 0.1 //prevents zooming in too close
         }
         if self.camera_angle < 0.0 {
-            self.camera_angle += 2.0 * PI; // allows for camera to spin horinzontaly constantly around player while preventing int overflow
+            self.camera_angle += 2.0 * PI; // allows for camera to spin horinzontaly constantly around player while preventing int underflow
+        }
+        else if self.camera_angle > 2.0 * PI{
+            self.camera_angle -= 2.0 * PI; // allows for camera to spin horinzontaly constantly around player while preventing int overflow
         }
         self.camera_angle = self.camera_angle % (2.0 * PI);
 
